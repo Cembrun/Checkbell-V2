@@ -1,0 +1,113 @@
+{
+  "Leitstand": {
+    "tasks": [
+      {
+        "kategorie": "deded",
+        "priorität": "",
+        "beschreibung": "deded",
+        "anhang": null,
+        "zielAbteilung": "",
+        "erstelltVon": "Admin",
+        "erstelltAm": "24.7.2025, 23:51:39",
+        "status": "offen",
+        "erledigtVon": "Admin"
+      }
+    ],
+    "meldungen": [
+      {
+        "kategorie": "",
+        "titel": "",
+        "beschreibung": "frfrfrfrfrfrfrfr",
+        "priorität": "",
+        "zielAbteilung": "",
+        "erstelltVon": "Admin",
+        "erstelltAm": "24.7.2025, 23:52:22",
+        "status": "offen"
+      },
+      {
+        "kategorie": "",
+        "titel": "",
+        "beschreibung": "frfrfrfrfrfrf",
+        "priorität": "",
+        "zielAbteilung": "",
+        "erstelltVon": "Admin",
+        "erstelltAm": "24.7.2025, 23:52:17",
+        "status": "offen"
+      },
+      {
+        "kategorie": "",
+        "titel": "",
+        "beschreibung": "frfrfrfrf",
+        "priorität": "",
+        "zielAbteilung": "",
+        "erstelltVon": "Admin",
+        "erstelltAm": "24.7.2025, 23:52:14",
+        "status": "offen"
+      },
+      {
+        "kategorie": "",
+        "titel": "frf",
+        "beschreibung": "rfrfrfr",
+        "priorität": "",
+        "zielAbteilung": "",
+        "erstelltVon": "Admin",
+        "erstelltAm": "24.7.2025, 23:52:09",
+        "status": "offen"
+      },
+      {
+        "kategorie": "Betrieb",
+        "titel": "frfrf",
+        "beschreibung": "frfrfrfrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr\nrffffffffffff",
+        "priorität": "mittel",
+        "zielAbteilung": "",
+        "erstelltVon": "Admin",
+        "erstelltAm": "24.7.2025, 23:52:02",
+        "status": "offen"
+      }
+    ]
+  },
+  "Technik": {
+    "tasks": [
+      {
+        "kategorie": "Betrieb",
+        "titel": "ee",
+        "beschreibung": "ee",
+        "priorität": "hoch",
+        "zielAbteilung": "",
+        "erstelltVon": "Admin",
+        "erstelltAm": "24.7.2025, 23:48:53",
+        "status": "offen"
+      }
+    ],
+    "meldungen": [
+      {
+        "kategorie": "Betrieb",
+        "titel": "QVW defekt",
+        "beschreibung": "blablabla",
+        "priorität": "hoch",
+        "zielAbteilung": "Technik",
+        "erstelltVon": "Admin",
+        "erstelltAm": "24.7.2025, 23:48:32",
+        "status": "offen"
+      },
+      {
+        "kategorie": "eded",
+        "priorität": "hoch",
+        "beschreibung": "eeee",
+        "anhang": null,
+        "zielAbteilung": "Technik",
+        "erstelltVon": "Admin",
+        "erstelltAm": "24.7.2025, 23:47:47",
+        "status": "offen"
+      }
+    ]
+  },
+  "Qualität": {
+    "tasks": [],
+    "meldungen": []
+  },
+  "Logistik": {
+    "tasks": [],
+    "meldungen": []
+  }
+}

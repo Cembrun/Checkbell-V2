@@ -1,0 +1,185 @@
+[
+  {
+    "kategorie": "Technik",
+    "titel": "Riemenriss og1",
+    "beschreibung": "rieemenriss",
+    "priorität": "hoch",
+    "zielAbteilung": null,
+    "erstelltVon": "Admin",
+    "erstelltAm": "17.8.2025, 21:20:47",
+    "status": "erledigt",
+    "id": "meg2munb0a1r9p",
+    "quelleAbteilung": "Leitstand",
+    "completed": true,
+    "completedAt": "2025-08-17T19:21:43.985Z",
+    "notizen": [
+      {
+        "autor": "Technik",
+        "text": "rimen ersetzt",
+        "zeit": "17.8.2025, 21:17:31"
+      },
+      {
+        "autor": "Technik",
+        "text": "noch nicht gut",
+        "zeit": "17.8.2025, 21:19:22"
+      },
+      {
+        "autor": "Admin",
+        "text": "noch nicht gut ",
+        "zeit": "17.8.2025, 21:20:11"
+      },
+      {
+        "autor": "Admin",
+        "text": "jetzt erledigt amk",
+        "zeit": "17.8.2025, 21:21:42"
+      }
+    ],
+    "erledigtVon": "Admin",
+    "originalId": "meg2hwome2y9d9"
+  },
+  {
+    "kategorie": "Technik",
+    "titel": "PCO2 Rolle defekt",
+    "beschreibung": "Rolledreht nicht bei f12",
+    "priorität": "mittel",
+    "zielAbteilung": null,
+    "erstelltVon": "Admin",
+    "erstelltAm": "17.8.2025, 21:43:36",
+    "status": "erledigt",
+    "id": "meg3alwhsd6fh4",
+    "quelleAbteilung": "Technik",
+    "completed": true,
+    "completedAt": "2025-08-17T21:09:24.500Z",
+    "notizen": [
+      {
+        "autor": "Admin",
+        "text": "erledigt",
+        "zeit": "17.8.2025, 21:41:30"
+      }
+    ],
+    "originalId": "meg3ag848cjcm0",
+    "erledigtVon": "Admin",
+    "expanded": false,
+    "anhangDateiUrl": "/uploads/1755459816950_2023-2-12_16-52-8-596.BMP"
+  },
+  {
+    "kategorie": "Technik",
+    "titel": "PCO2 Rolle defekt",
+    "beschreibung": "Rolledreht nicht bei f12",
+    "priorität": "mittel",
+    "zielAbteilung": null,
+    "erstelltVon": "Technik",
+    "erstelltAm": "17.8.2025, 21:50:18",
+    "status": "erledigt",
+    "id": "meg3otgrntwew0",
+    "quelleAbteilung": "Leitstand",
+    "completed": true,
+    "completedAt": "2025-08-17T19:51:02.721Z",
+    "notizen": [
+      {
+        "autor": "Admin",
+        "text": "erledigt",
+        "zeit": "17.8.2025, 21:41:30"
+      },
+      {
+        "autor": "Admin",
+        "text": "noch nicht gut ",
+        "zeit": "17.8.2025, 21:50:14"
+      },
+      {
+        "autor": "Admin",
+        "text": "eetz schon amk",
+        "zeit": "17.8.2025, 21:51:01"
+      }
+    ],
+    "erledigtVon": "Admin",
+    "originalId": "meg3ag848cjcm0"
+  },
+  {
+    "kategorie": "",
+    "titel": "vfvf",
+    "beschreibung": "vfvfvfvfvf",
+    "priorität": "",
+    "zielAbteilung": null,
+    "erstelltVon": "admin",
+    "erstelltAm": "19.8.2025, 23:00:51",
+    "status": "erledigt",
+    "id": "mej138t8molild",
+    "createdAt": "2025-08-19T21:00:51.164Z",
+    "quelleAbteilung": "Leitstand",
+    "completed": true,
+    "completedAt": "2025-08-19T21:00:58.770Z",
+    "notizen": [],
+    "anhaenge": [],
+    "originalId": "mej135g2p8vxtg",
+    "erledigtVon": "admin"
+  },
+  {
+    "kategorie": "Technik",
+    "titel": "Riemenriss OG 2",
+    "beschreibung": "Bei Loop 2 Riemenriss bei förderer F22 -> Aufwirkung auf Auslieferung ",
+    "priorität": "hoch",
+    "zielAbteilung": null,
+    "erstelltVon": "admin",
+    "erstelltAm": "20.8.2025, 16:49:22",
+    "status": "erledigt",
+    "id": "mek39dntjnavyl",
+    "createdAt": "2025-08-20T14:49:22.793Z",
+    "quelleAbteilung": "Leitstand",
+    "completed": true,
+    "completedAt": "2025-08-20T14:49:52.922Z",
+    "notizen": [
+      {
+        "autor": "admin",
+        "text": "riemen wurde ersetzt",
+        "zeit": "20.8.2025, 16:50:14"
+      }
+    ],
+    "anhaenge": [],
+    "originalId": "mek3863ilqmmja",
+    "erledigtVon": "admin"
+  },
+  {
+    "kategorie": "Technik",
+    "titel": "test an technik",
+    "beschreibung": "dede",
+    "priorität": "hoch",
+    "zielAbteilung": null,
+    "erstelltVon": "admin",
+    "erstelltAm": "20.8.2025, 22:36:38",
+    "status": "offen",
+    "id": "mekfnyhfujovi8",
+    "createdAt": "2025-08-20T20:36:38.355Z",
+    "quelleAbteilung": "Leitstand",
+    "completed": false,
+    "completedAt": null,
+    "notizen": [],
+    "anhaenge": [],
+    "originalId": "mekfnvewtlhv21"
+  },
+  {
+    "kategorie": "Technik",
+    "titel": "Riemenriss OG 2",
+    "beschreibung": "Bei Loop 2 Riemenriss bei förderer F22 -> Aufwirkung auf Auslieferung ",
+    "priorität": "hoch",
+    "zielAbteilung": null,
+    "erstelltVon": "admin",
+    "erstelltAm": "20.8.2025, 22:36:58",
+    "status": "offen",
+    "id": "mekfodxbvrkxse",
+    "createdAt": "2025-08-20T20:36:58.367Z",
+    "quelleAbteilung": "Leitstand",
+    "completed": false,
+    "completedAt": null,
+    "notizen": [
+      {
+        "autor": "admin",
+        "text": "riemen wurde ersetzt",
+        "zeit": "20.8.2025, 16:50:14"
+      }
+    ],
+    "anhaenge": [],
+    "erledigtVon": "admin",
+    "originalId": "mek3863ilqmmja"
+  }
+]

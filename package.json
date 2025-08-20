@@ -1,0 +1,51 @@
+{
+  "name": "checkbell",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "vite",
+    "dev": "vite",
+    "dev:client": "vite",
+    "server": "node backend/server.js",
+    "dev:server": "nodemon backend/server.js",
+    "dev:all": "concurrently \"npm:dev:server\" \"npm:dev:client\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "seed": "node -e \"fetch('http://localhost:4000/api/seed?reset=true&force=true',{method:'POST'}).then(r=>r.text()).then(t=>console.log(t)).catch(e=>{console.error(e);process.exit(1);})\""
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.1.11",
+    "bcrypt": "^6.0.0",
+    "body-parser": "^2.2.0",
+    "connect-redis": "^9.0.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "express-session": "^1.18.2",
+    "ioredis": "^5.7.0",
+    "jspdf": "^3.0.1",
+    "multer": "^2.0.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-icons": "^5.5.0",
+    "react-router-dom": "^7.8.1",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.30.1",
+    "@types/react": "^19.1.8",
+    "@types/react-dom": "^19.1.6",
+    "@vitejs/plugin-react": "^4.6.0",
+    "autoprefixer": "^10.4.21",
+    "concurrently": "^9.0.1",
+    "eslint": "^9.30.1",
+    "eslint-plugin-react-hooks": "^5.2.0",
+    "eslint-plugin-react-refresh": "^0.4.20",
+    "globals": "^16.3.0",
+    "nodemon": "^3.1.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.1",
+    "vite": "^7.0.4"
+  }
+}

@@ -1,0 +1,37 @@
+[
+  {
+    "username": "admin",
+    "password": "$2b$10$UfhL1SnXPwn9jrbfWkXb1u/3jW4Ew8H628JRCNcnfgOzLT0f2oC4O",
+    "isAdmin": true,
+    "mustChangePassword": true,
+    "createdAt": "2025-08-19T20:57:45.178Z",
+    "preferences": {
+      "tasks:Leitstand": {
+        "status": "offen",
+        "kategorie": "alle",
+        "date": "today",
+        "sort": "desc"
+      },
+      "meldungen:Leitstand": {
+        "status": "offen",
+        "kategorie": "alle",
+        "date": "today",
+        "sort": "desc"
+      }
+    }
+  },
+  {
+    "username": "Laura",
+    "password": "$2b$10$gJGXUyAr2DN1XcgpxMm38.zLpBeF2yVtwi3nzHblu6NcjYgnT.UAe",
+    "isAdmin": true,
+    "mustChangePassword": true,
+    "createdAt": "2025-08-19T21:35:26.116Z"
+  },
+  {
+    "username": "Cem",
+    "password": "$2b$10$KHGI/fEyRRnGEIw4VIqWfupi9/7p7gTKyhTvM5bkIolxsPknHBlSO",
+    "isAdmin": true,
+    "mustChangePassword": true,
+    "createdAt": "2025-08-20T17:43:17.587Z"
+  }
+]

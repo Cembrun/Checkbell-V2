@@ -15,7 +15,7 @@ const kategorien = [
   "Betrieb"
 ];
 
-const API = "http://localhost:4000";
+const API = "https://bell-5s68.onrender.com";
 
 // ----------------- Helper -----------------
 const isImageExt = (url) => /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url || "");

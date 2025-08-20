@@ -18,6 +18,8 @@ const ARCHIVE_SUFFIX = "_archive.json"; // z.B. Technik_archive.json
 const CLIENT_ORIGINS = [
   process.env.CLIENT_ORIGIN || "http://localhost:5173",
   "http://localhost:5174",
+  "https://checkbellapp.vercel.app",
+  "https://checkbellapp.vercel.app/",
 ];
 
 // Abteilungen für den Scheduler

@@ -2,6 +2,14 @@
 import session from 'express-session';
 import connectRedis from 'connect-redis';
 import Redis from 'ioredis';
+// Optional helper to enable Redis-backed sessions when REDIS_URL is provided.
+import session from 'express-session';
+import Redis from 'ioredis';
+import { createRequire } from 'module';
+
+// connect-redis is a CommonJS module; use createRequire to load it in ESM context
+const require = createRequire(import.meta.url);
+const connectRedis = require('connect-redis');
 
 export function makeSessionMiddleware(options = {}) {
   const RedisStore = connectRedis(session);

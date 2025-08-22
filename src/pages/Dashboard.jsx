@@ -765,23 +765,66 @@ export default function Dashboard({ user, onLogout }) {
           <div className="flex justify-between items-center mb-4">
             <div className="space-x-2">
               {TABS.map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    activeTab === tab
-                      ? "bg-white text-gray-900 shadow"
-                      : "bg-gray-700 text-gray-200 hover:bg-gray-600"
-                  }`}
-                >
-                  {tab === "tasks"
-                    ? "Tasks"
-                    : tab === "meldungen"
-                    ? "Meldungen"
-                    : "Wiederkehrend"}
-                </button>
+                <span key={tab} className="inline-flex items-center">
+                  <button
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                      activeTab === tab
+                        ? "bg-white text-gray-900 shadow"
+                        : "bg-gray-700 text-gray-200 hover:bg-gray-600"
+                    }`}
+                  >
+                    {tab === "tasks"
+                      ? "Tasks"
+                      : tab === "meldungen"
+                      ? "Meldungen"
+                      : "Wiederkehrend"}
+                  </button>
+
+                  {tab === "wiederkehrend" && (
+                    <button
+                      onClick={() => {
+                        // preserve original behavior: open task form when not on wiederkehrend
+                        if (activeTab !== "wiederkehrend") {
+                          setFormVisible(true);
+                          setFormData({
+                            kategorie: "",
+                            titel: "",
+                            beschreibung: "",
+                            priorität: "",
+                            zielAbteilung: "",
+                          });
+                          setEditingIndex(null);
+                          setFiles([]);
+                        } else {
+                          // already on wiederkehrend: ensure recurring form reset
+                          setRecForm({
+                            id: null,
+                            titel: "",
+                            beschreibung: "",
+                            zeit: "07:00",
+                            intervall: "daily",
+                            dueDate: "",
+                            anleitungUrl: "",
+                            vorlaufMin: 120,
+                            cooldownHours: 8,
+                          });
+                          setRecUploadFile(null);
+                          setTimeout(() => setReloadCounter((c) => c + 1), 0);
+                        }
+                      }}
+                      className="ml-2 inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-full shadow"
+                      title="Hinzufügen"
+                      aria-label="Hinzufügen"
+                    >
+                      <span className="text-lg">➕</span>
+                    </button>
+                  )}
+                </span>
               ))}
             </div>
+
+            {/* Add button moved to left of Wiederkehrend tab */}
 
             {activeTab !== "wiederkehrend" && (
               <div className="space-x-2 flex flex-wrap items-center justify-end">
@@ -863,23 +906,7 @@ export default function Dashboard({ user, onLogout }) {
                   <option value="asc">Alt → Neu</option>
                 </select>
 
-                <button
-                  onClick={() => {
-                    setFormVisible(true);
-                    setFormData({
-                      kategorie: "",
-                      titel: "",
-                      beschreibung: "",
-                      priorität: "",
-                      zielAbteilung: "",
-                    });
-                    setEditingIndex(null);
-                    setFiles([]);
-                  }}
-                  className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow"
-                >
-                  <span className="text-lg">➕</span> Hinzufügen
-                </button>
+                {/* centered Add button is used above; removed duplicate here */}
 
                 <button
                   onClick={handleSaveView}

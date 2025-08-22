@@ -1,49 +1,5 @@
 [
   {
-    "kategorie": "",
-    "titel": "vfvf",
-    "beschreibung": "vfvfvfvfvf",
-    "priorität": "",
-    "zielAbteilung": null,
-    "erstelltVon": "admin",
-    "erstelltAm": "19.8.2025, 23:00:51",
-    "status": "erledigt",
-    "id": "mej138t8molild",
-    "createdAt": "2025-08-19T21:00:51.164Z",
-    "quelleAbteilung": "Leitstand",
-    "completed": true,
-    "completedAt": "2025-08-19T21:00:58.770Z",
-    "notizen": [],
-    "anhaenge": [],
-    "originalId": "mej135g2p8vxtg",
-    "erledigtVon": "admin"
-  },
-  {
-    "kategorie": "Technik",
-    "titel": "Riemenriss OG 2",
-    "beschreibung": "Bei Loop 2 Riemenriss bei förderer F22 -> Aufwirkung auf Auslieferung ",
-    "priorität": "hoch",
-    "zielAbteilung": null,
-    "erstelltVon": "admin",
-    "erstelltAm": "20.8.2025, 16:49:22",
-    "status": "erledigt",
-    "id": "mek39dntjnavyl",
-    "createdAt": "2025-08-20T14:49:22.793Z",
-    "quelleAbteilung": "Leitstand",
-    "completed": true,
-    "completedAt": "2025-08-20T14:49:52.922Z",
-    "notizen": [
-      {
-        "autor": "admin",
-        "text": "riemen wurde ersetzt",
-        "zeit": "20.8.2025, 16:50:14"
-      }
-    ],
-    "anhaenge": [],
-    "originalId": "mek3863ilqmmja",
-    "erledigtVon": "admin"
-  },
-  {
     "kategorie": "Technik",
     "titel": "test an technik",
     "beschreibung": "dede",
@@ -51,15 +7,16 @@
     "zielAbteilung": null,
     "erstelltVon": "admin",
     "erstelltAm": "20.8.2025, 22:36:38",
-    "status": "offen",
+    "status": "erledigt",
     "id": "mekfnyhfujovi8",
     "createdAt": "2025-08-20T20:36:38.355Z",
     "quelleAbteilung": "Leitstand",
-    "completed": false,
-    "completedAt": null,
+    "completed": true,
+    "completedAt": "2025-08-22T16:45:09.017Z",
     "notizen": [],
     "anhaenge": [],
-    "originalId": "mekfnvewtlhv21"
+    "originalId": "mekfnvewtlhv21",
+    "erledigtVon": "123"
   },
   {
     "kategorie": "Technik",
@@ -69,12 +26,12 @@
     "zielAbteilung": null,
     "erstelltVon": "admin",
     "erstelltAm": "20.8.2025, 22:36:58",
-    "status": "offen",
+    "status": "erledigt",
     "id": "mekfodxbvrkxse",
     "createdAt": "2025-08-20T20:36:58.367Z",
     "quelleAbteilung": "Leitstand",
-    "completed": false,
-    "completedAt": null,
+    "completed": true,
+    "completedAt": "2025-08-22T16:45:08.590Z",
     "notizen": [
       {
         "autor": "admin",
@@ -83,7 +40,7 @@
       }
     ],
     "anhaenge": [],
-    "erledigtVon": "admin",
+    "erledigtVon": "123",
     "originalId": "mek3863ilqmmja"
   },
   {
@@ -94,12 +51,12 @@
     "zielAbteilung": null,
     "erstelltVon": "admin",
     "erstelltAm": "22.8.2025, 11:26:06",
-    "status": "offen",
+    "status": "erledigt",
     "id": "memmlcjkk60960",
     "createdAt": "2025-08-22T09:26:06.293Z",
     "quelleAbteilung": "Leitstand",
-    "completed": false,
-    "completedAt": null,
+    "completed": true,
+    "completedAt": "2025-08-22T16:45:08.045Z",
     "notizen": [
       {
         "autor": "admin",
@@ -108,70 +65,7 @@
       }
     ],
     "anhaenge": [],
-    "erledigtVon": "admin",
-    "originalId": "mek3863ilqmmja"
-  },
-  {
-    "kategorie": "Technik",
-    "titel": "stuhl kapput",
-    "beschreibung": "",
-    "priorität": "",
-    "zielAbteilung": null,
-    "erstelltVon": "admin",
-    "erstelltAm": "22.8.2025, 13:48:29",
-    "status": "erledigt",
-    "id": "memrogsh67e6fm",
-    "createdAt": "2025-08-22T11:48:29.825Z",
-    "quelleAbteilung": "Leitstand",
-    "completed": true,
-    "completedAt": "2025-08-22T11:48:57.361Z",
-    "notizen": [
-      {
-        "autor": "admin",
-        "text": "erledigt stuhl repariert",
-        "zeit": "22.8.2025, 13:48:55"
-      }
-    ],
-    "anhaenge": [],
-    "originalId": "memroapuc26sbn",
-    "erledigtVon": "admin"
-  },
-  {
-    "kategorie": "",
-    "titel": "test",
-    "beschreibung": "",
-    "priorität": "",
-    "zielAbteilung": null,
-    "erstelltVon": "admin",
-    "erstelltAm": "22.8.2025, 14:17:30",
-    "status": "erledigt",
-    "id": "memsps2gbza7qv",
-    "createdAt": "2025-08-22T12:17:30.738Z",
-    "quelleAbteilung": "Leitstand",
-    "completed": true,
-    "completedAt": "2025-08-22T12:17:37.164Z",
-    "notizen": [],
-    "anhaenge": [],
-    "originalId": "memsbgcoupnx2n",
-    "erledigtVon": "123"
-  },
-  {
-    "kategorie": "",
-    "titel": "test",
-    "beschreibung": "",
-    "priorität": "",
-    "zielAbteilung": null,
-    "erstelltVon": "admin",
-    "erstelltAm": "22.8.2025, 14:17:58",
-    "status": "erledigt",
-    "id": "memsqdvut5sykz",
-    "createdAt": "2025-08-22T12:17:58.986Z",
-    "quelleAbteilung": "Leitstand",
-    "completed": true,
-    "completedAt": "2025-08-22T12:18:16.078Z",
-    "notizen": [],
-    "anhaenge": [],
     "erledigtVon": "123",
-    "originalId": "memsbgcoupnx2n"
+    "originalId": "mek3863ilqmmja"
   }
 ]

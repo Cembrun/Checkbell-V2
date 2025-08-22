@@ -2,43 +2,30 @@
 import express from "express";
 import fs from "fs";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import bodyParser from "body-parser";
 import bcrypt from "bcrypt";
 import path from "path";
 import multer from "multer";
-import session from "express-session";
+import { makeSessionMiddleware } from "./redis-session-optional.js";
 
 const app = express();
-const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
+const PORT = 4000;
 
 const USERS_FILE = "./users.json";
 const DATA_DIR = "./data";
 const UPLOAD_DIR = "./uploads";
 const ARCHIVE_SUFFIX = "_archive.json"; // z.B. Technik_archive.json
-// Allowed client origins. Can be a comma-separated env var FRONTEND_URLS or single FRONTEND_URL.
-const envFrontend = process.env.FRONTEND_URLS || process.env.FRONTEND_URL || process.env.CLIENT_ORIGIN || "http://localhost:5173,http://localhost:5174,http://localhost:74";
-const CLIENT_ORIGINS = envFrontend.split(",").map((s) => s.trim()).filter(Boolean);
+const CLIENT_ORIGINS = [
+  process.env.CLIENT_ORIGIN || "http://localhost:5173",
+  "http://localhost:5174",
+  "https://checkbellapp.vercel.app",
+  "https://checkbellapp.vercel.app/",
+];
 
-// Abteilungen (persistiert in departments.json)
-const DEPARTMENTS_FILE = path.join('.', 'departments.json');
-function readDepartments() {
-  try {
-    const raw = fs.readFileSync(DEPARTMENTS_FILE, 'utf8');
-    const arr = JSON.parse(raw);
-    if (Array.isArray(arr)) return arr;
-  } catch {}
-  return ["Leitstand", "Technik", "Qualität", "Logistik"];
-}
-function writeDepartments(arr) {
-  try {
-    fs.writeFileSync(DEPARTMENTS_FILE, JSON.stringify(arr, null, 2));
-    return true;
-  } catch (e) {
-    console.warn('Could not write departments file', e?.message || e);
-    return false;
-  }
-}
-let ALL_DEPARTMENTS = readDepartments();
+// Abteilungen für den Scheduler
+const ALL_DEPARTMENTS = ["Leitstand", "Technik", "Qualität", "Logistik"];
 
 // ----- Ordner anlegen -----
 function ensureDir(p) {
@@ -47,7 +34,17 @@ function ensureDir(p) {
 ensureDir(DATA_DIR);
 ensureDir(UPLOAD_DIR);
 
+// SECURITY: fail fast if SESSION_SECRET missing in production
+if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
+  console.error("FATAL: SESSION_SECRET is required in production environment. Set process.env.SESSION_SECRET");
+  process.exit(1);
+}
+
 // ----- CORS / JSON / Sessions -----
+// Basic security headers
+app.use(helmet());
+
+// CORS configuration
 app.use(
   cors({
     origin(origin, cb) {
@@ -63,30 +60,27 @@ app.use(
   })
 );
 
+// Rate limiting (global + auth specific)
+const globalLimiter = rateLimit({ windowMs: 60 * 1000, max: 400 });
+app.use(globalLimiter);
+
+const authLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, message: { message: 'Zu viele Loginversuche, bitte später erneut versuchen' } });
+
 // JSON-Parser
 app.use(bodyParser.json());
 
-// Sessions (MemoryStore für Dev)
-app.use(
-  session({
-    secret: process.env.SESSION_SECRET || "dev-secret-change-me",
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      sameSite: "lax",
-      secure: false, // hinter HTTPS => true
-      maxAge: 1000 * 60 * 60 * 8, // 8h
-    },
-  })
-);
+// Sessions (MemoryStore für Dev oder Redis wenn REDIS_URL gesetzt)
+app.use(makeSessionMiddleware());
 
 // Static /uploads mit passenden Headern
+// Serve uploads but restrict CORS exposure
 app.use(
   "/uploads",
   express.static(UPLOAD_DIR, {
-    setHeaders: (res) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
+    setHeaders: (res, pathFile) => {
+      // In prod only allow configured client origin; for dev allow localhost
+      const allowed = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
+      res.setHeader("Access-Control-Allow-Origin", allowed);
       res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
     },
   })
@@ -97,9 +91,16 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => cb(null, Date.now() + "_" + file.originalname),
 });
+// Allow only common safe types
+const ALLOWED_MIMES = ["image/png", "image/jpeg", "image/jpg", "application/pdf"];
+function fileFilter(req, file, cb) {
+  if (ALLOWED_MIMES.includes(file.mimetype)) return cb(null, true);
+  return cb(new Error('Ungültiger Dateityp'));
+}
 const upload = multer({
   storage,
-  limits: { fileSize: 50 * 1024 * 1024, files: 20 },
+  fileFilter,
+  limits: { fileSize: 15 * 1024 * 1024, files: 20 },
 });
 
 // ----- JSON-Helper -----
@@ -262,36 +263,6 @@ async function syncToQuelle(originalId, quelleAbteilung, changes) {
 // ✅ Ping
 app.get("/", (req, res) => res.send("✅ Backend läuft!"));
 
-// Endpoints to manage departments
-app.get('/api/departments', (req, res) => {
-  res.json(ALL_DEPARTMENTS);
-});
-
-app.post('/api/departments', requireAdmin, (req, res) => {
-  const { name } = req.body || {};
-  if (!name || typeof name !== 'string') return res.status(400).json({ message: 'Name required' });
-  const clean = String(name).trim();
-  if (!clean) return res.status(400).json({ message: 'Invalid name' });
-  if (ALL_DEPARTMENTS.includes(clean)) return res.status(400).json({ message: 'Already exists' });
-  ALL_DEPARTMENTS.push(clean);
-  writeDepartments(ALL_DEPARTMENTS);
-  // ensure empty data files for new department
-  try { fs.writeFileSync(path.join(DATA_DIR, `${clean}_tasks.json`), '[]'); } catch {}
-  try { fs.writeFileSync(path.join(DATA_DIR, `${clean}_meldungen.json`), '[]'); } catch {}
-  try { fs.writeFileSync(path.join(DATA_DIR, `${clean}_recurring.json`), '[]'); } catch {}
-  res.json({ ok: true, departments: ALL_DEPARTMENTS });
-});
-
-app.delete('/api/departments/:name', requireAdmin, (req, res) => {
-  const name = req.params.name;
-  if (!ALL_DEPARTMENTS.includes(name)) return res.status(404).json({ message: 'Not found' });
-  // prevent removing last department
-  if (ALL_DEPARTMENTS.length <= 1) return res.status(400).json({ message: 'Cannot remove last department' });
-  ALL_DEPARTMENTS = ALL_DEPARTMENTS.filter((d) => d !== name);
-  writeDepartments(ALL_DEPARTMENTS);
-  res.json({ ok: true, departments: ALL_DEPARTMENTS });
-});
-
 // ============= Auth (Session) =============
 app.post("/api/register", async (req, res) => {
   const { username, password } = req.body || {};
@@ -314,7 +285,7 @@ app.post("/api/register", async (req, res) => {
   res.json({ message: "Erfolgreich registriert" });
 });
 
-app.post("/api/login", async (req, res) => {
+app.post("/api/login", authLimiter, async (req, res) => {
   const { username, password } = req.body || {};
   const users = getUsersArray();
   const user = users.find((u) => u.username === username);
@@ -1185,12 +1156,20 @@ app.put("/api/:abteilung/:typ/:idOrIndex", uploadFields, async (req, res) => {
   res.json(updated);
 });
 
-// Multer-Fehler
+// Multer-Fehler / Upload error handling
 app.use((err, req, res, next) => {
-  if (err && (err.code === "LIMIT_FILE_SIZE" || err instanceof multer.MulterError)) {
+  if (!err) return next();
+  if (err.code === "LIMIT_FILE_SIZE") {
     return res.status(413).json({ message: "Datei zu groß (max. 15 MB)" });
   }
-  next(err);
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ message: err.message || "Upload Fehler" });
+  }
+  if (String(err.message || '').includes('Ungültiger Dateityp')) {
+    return res.status(400).json({ message: 'Ungültiger Dateityp. Erlaubt: png,jpg,pdf' });
+  }
+  console.error('Unhandled error:', err);
+  res.status(500).json({ message: 'Interner Serverfehler' });
 });
 
 /* =========================================================
@@ -1353,20 +1332,25 @@ function seedDepartment(dep, { reset = false } = {}) {
 }
 
 // Seed-Route (GET/POST)
-app.all("/api/seed", (req, res) => {
-  const reset =
-    String(req.query.reset || req.body?.reset || "false").toLowerCase() === "true";
-  const force =
-    String(req.query.force || req.body?.force || "false").toLowerCase() === "true";
+// Seed-Route (GET/POST) - guarded in production
+if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED !== 'true') {
+  app.all('/api/seed', (req, res) => res.status(403).json({ message: 'Seed route forbidden in production' }));
+} else {
+  app.all("/api/seed", (req, res) => {
+    const reset =
+      String(req.query.reset || req.body?.reset || "false").toLowerCase() === "true";
+    const force =
+      String(req.query.force || req.body?.force || "false").toLowerCase() === "true";
 
-  const summary = [];
-  for (const dep of ALL_DEPARTMENTS) {
-    summary.push(seedDepartment(dep, { reset }));
-    ensureRecurringInstances(dep, { force }).catch(() => {});
-  }
+    const summary = [];
+    for (const dep of ALL_DEPARTMENTS) {
+      summary.push(seedDepartment(dep, { reset }));
+      ensureRecurringInstances(dep, { force }).catch(() => {});
+    }
 
-  res.json({ ok: true, reset, force, summary });
-});
+    res.json({ ok: true, reset, force, summary });
+  });
+}
 
 // Server
 app.listen(PORT, () => {

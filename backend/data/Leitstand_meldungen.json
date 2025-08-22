@@ -50,5 +50,23 @@
     "notizen": [],
     "anhaenge": [],
     "erledigtVon": "123"
+  },
+  {
+    "kategorie": "Betrieb",
+    "titel": "",
+    "beschreibung": "",
+    "priorität": "",
+    "zielAbteilung": "",
+    "erstelltVon": "admin",
+    "erstelltAm": "22.8.2025, 15:23:49",
+    "status": "erledigt",
+    "id": "memv32cbgk1iu5",
+    "createdAt": "2025-08-22T13:23:49.787Z",
+    "quelleAbteilung": "Leitstand",
+    "completed": true,
+    "completedAt": "2025-08-22T13:23:56.238Z",
+    "notizen": [],
+    "anhaenge": [],
+    "erledigtVon": "admin"
   }
 ]

@@ -34,10 +34,13 @@ function ensureDir(p) {
 ensureDir(DATA_DIR);
 ensureDir(UPLOAD_DIR);
 
-// SECURITY: fail fast if SESSION_SECRET missing in production
+// SECURITY: in production we strongly recommend SESSION_SECRET be set.
+// Previously we aborted startup if SESSION_SECRET was missing which causes
+// hosted containers to exit. For now we only log a clear warning so the
+// app can start; please set SESSION_SECRET in your Render/host environment
+// for secure sessions.
 if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
-  console.error("FATAL: SESSION_SECRET is required in production environment. Set process.env.SESSION_SECRET");
-  process.exit(1);
+  console.error("WARNING: SESSION_SECRET is NOT set in production. Set process.env.SESSION_SECRET to a strong secret in your host environment.");
 }
 
 // ----- CORS / JSON / Sessions -----

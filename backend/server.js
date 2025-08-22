@@ -73,21 +73,31 @@ const authLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, message: { message:
 app.use(bodyParser.json());
 
 // Sessions (MemoryStore für Dev oder Redis wenn REDIS_URL gesetzt)
+// makeSessionMiddleware is async (per redis-session-optional.js). Use top-level await
+// to initialize it and provide a clear in-memory fallback on any error.
 try {
-  app.use(makeSessionMiddleware());
+  const sessionMiddleware = await makeSessionMiddleware();
+  app.use(sessionMiddleware);
 } catch (e) {
   console.error('Session middleware initialization failed, falling back to in-memory sessions:', e && e.message ? e.message : e);
-  // dynamic import to avoid top-level require issues in ESM
-  (async () => {
+  try {
     const mod = await import('express-session');
     const fallback = mod && mod.default ? mod.default : mod;
-    app.use(fallback({
-      secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
-      resave: false,
-      saveUninitialized: false,
-      cookie: { httpOnly: true, sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', secure: process.env.NODE_ENV === 'production' },
-    }));
-  })().catch((err) => console.error('Failed to initialize fallback session middleware:', err));
+    app.use(
+      fallback({
+        secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
+        resave: false,
+        saveUninitialized: false,
+        cookie: {
+          httpOnly: true,
+          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+          secure: process.env.NODE_ENV === 'production',
+        },
+      })
+    );
+  } catch (err) {
+    console.error('Failed to initialize fallback session middleware:', err && err.message ? err.message : err);
+  }
 }
 
 // Static /uploads mit passenden Headern

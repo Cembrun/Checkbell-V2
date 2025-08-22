@@ -38,6 +38,14 @@ export function makeSessionMiddleware(options = {}) {
     const IORedis = require('ioredis');
     const client = new IORedis(redisUrl);
 
+    // Helpful logs for deployment verification
+    client.on('ready', () => {
+      console.log('redis-session-optional: Redis client ready');
+    });
+    client.on('error', (err) => {
+      console.error('redis-session-optional: Redis client error:', err && err.message ? err.message : err);
+    });
+
     return session({
       ...baseOpts,
       store: new RedisStore({ client }),

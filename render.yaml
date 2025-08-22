@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: checkbell-backend
+    env: docker
+    dockerfilePath: backend/Dockerfile
+    branch: main
+  autoDeploy: true
+  plan: free
+  instanceType: starter
+  instanceCount: 1
+  healthCheckPath: /api/health
+  healthCheckIntervalSeconds: 10
+    disks:
+      - name: data
+        mountPath: /app/data
+        sizeGb: 5
+      - name: uploads
+        mountPath: /app/uploads
+        sizeGb: 5
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SESSION_SECRET
+        value: "<SET_IN_RENDER_DASHBOARD>"
+      - key: FRONTEND_URLS
+        value: "<SET_IN_RENDER_DASHBOARD>"

@@ -40,36 +40,3 @@ export function makeSessionMiddleware(options = {}) {
   });
 }
 
-export function makeSessionMiddleware(options = {}) {
-  const RedisStore = connectRedis(session);
-  const redisUrl = process.env.REDIS_URL;
-
-  if (redisUrl) {
-    const client = new Redis(redisUrl);
-    return session({
-      store: new RedisStore({ client }),
-      secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
-      resave: false,
-      saveUninitialized: false,
-      cookie: {
-        httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        maxAge: 1000 * 60 * 60 * 8,
-      },
-    });
-  }
-
-  // fallback to default memory store
-  return session({
-    secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 1000 * 60 * 60 * 8,
-    },
-  });
-}

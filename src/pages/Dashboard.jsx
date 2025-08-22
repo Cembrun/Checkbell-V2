@@ -230,6 +230,8 @@ const fmtDateTime = (iso) => {
     return "Zeitpunkt unbekannt";
   }
 };
+// Short description cutoff for collapsed view
+const SHORT_DESC_LEN = 140;
 
 export default function Dashboard({ user, onLogout }) {
   const [activeDepartment, setActiveDepartment] = useState(DEPARTMENTS[0]);
@@ -248,8 +250,11 @@ export default function Dashboard({ user, onLogout }) {
     priorität: "",
     zielAbteilung: "",
   });
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
+  const [previews, setPreviews] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const dropRef = useRef();
+  const fileInputRef = useRef();
 
   const [weiterleitenIndex, setWeiterleitenIndex] = useState(null);
   const [weiterleitenZiel, setWeiterleitenZiel] = useState("");
@@ -422,7 +427,14 @@ export default function Dashboard({ user, onLogout }) {
     e.stopPropagation();
     dropRef.current?.classList.remove("border-blue-400");
     if (e.dataTransfer.files?.length) {
-      setFile(e.dataTransfer.files[0]);
+      const fArr = Array.from(e.dataTransfer.files);
+      setFiles(fArr);
+      // create previews
+      setPreviews((prev) => {
+        // revoke old urls
+        (prev || []).forEach((p) => p.url && URL.revokeObjectURL(p.url));
+        return fArr.map((f) => ({ name: f.name, url: f.type?.startsWith("image/") ? URL.createObjectURL(f) : null, type: f.type }));
+      });
       e.dataTransfer.clearData();
     }
   };
@@ -444,7 +456,11 @@ export default function Dashboard({ user, onLogout }) {
 
     const fd = new FormData();
     fd.append("eintrag", JSON.stringify(eintrag));
-    if (file) fd.append("anhangDatei", file);
+    if (files && files.length > 0) {
+      for (const f of files) {
+        fd.append("anhangDateien", f);
+      }
+    }
 
     try {
       const res = await fetch(`${API}/api/${zielDep}/${activeTab}`, {
@@ -458,7 +474,7 @@ export default function Dashboard({ user, onLogout }) {
       return;
     }
 
-    setFormVisible(false);
+  setFormVisible(false);
     setFormData({
       kategorie: "",
       titel: "",
@@ -466,7 +482,7 @@ export default function Dashboard({ user, onLogout }) {
       priorität: "",
       zielAbteilung: "",
     });
-    setFile(null);
+  setFiles([]);
     setEditingIndex(null);
 
     // manuell reload triggern
@@ -551,7 +567,7 @@ export default function Dashboard({ user, onLogout }) {
     setFormData(data[index]);
     setEditingIndex(index);
     setFormVisible(true);
-    setFile(null);
+  setFiles([]);
   };
 
   const handleWeiterleiten = async (index) => {
@@ -616,28 +632,38 @@ export default function Dashboard({ user, onLogout }) {
   /* ----------------- UI ----------------- */
   return (
     <div className="flex flex-col min-h-screen bg-gray-900 text-white">
-      <header className="bg-gray-800 p-4 flex justify-between items-center shadow-md">
-        <h1 className="text-xl font-bold text-blue-400">CheckBell</h1>
-        <div className="text-sm text-gray-300">
-          <span className="font-semibold">{user.username}</span>
+      <header className="bg-gradient-to-r from-blue-700 to-indigo-700 p-4 flex justify-between items-center shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg">CB</div>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight">CheckBell</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="text-sm text-white/90 bg-white/5 px-3 py-1 rounded-md">
+            <span className="font-medium">{user.username}</span>
+          </div>
         </div>
       </header>
 
-      <div className="flex flex-1">
-        <aside className="w-52 bg-gray-800 p-4">
-          <h2 className="font-bold text-xl mb-6">Abteilungen</h2>
+      <div className="flex flex-col md:flex-row flex-1">
+        <aside className="w-full md:w-60 bg-gradient-to-b from-gray-800 to-gray-900 p-5 border-r border-gray-700">
+          <h2 className="font-semibold text-lg mb-4 text-gray-200">Abteilungen</h2>
           {DEPARTMENTS.map((dep) => (
             <button
               key={dep}
               onClick={() => setActiveDepartment(dep)}
-              className={`block w-full text-left px-3 py-2 mb-2 rounded ${
-                activeDepartment === dep ? "bg-blue-600" : "bg-gray-700"
+              className={`block w-full text-left px-3 py-2 mb-2 rounded-md transition-colors ${
+                activeDepartment === dep
+                  ? "bg-blue-600 text-white shadow"
+                  : "bg-gray-700 text-gray-200 hover:bg-blue-600 hover:text-white"
               }`}
             >
               {dep}
             </button>
           ))}
-          <button onClick={onLogout} className="mt-8 text-red-400 underline">
+          <button
+            onClick={onLogout}
+            className="mt-6 w-full text-left px-3 py-2 rounded-md bg-red-600 text-white hover:opacity-95"
+          >
             Logout
           </button>
         </aside>
@@ -650,8 +676,10 @@ export default function Dashboard({ user, onLogout }) {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded ${
-                    activeTab === tab ? "bg-blue-500" : "bg-gray-700"
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    activeTab === tab
+                      ? "bg-white text-gray-900 shadow"
+                      : "bg-gray-700 text-gray-200 hover:bg-gray-600"
                   }`}
                 >
                   {tab === "tasks"
@@ -754,40 +782,23 @@ export default function Dashboard({ user, onLogout }) {
                       zielAbteilung: "",
                     });
                     setEditingIndex(null);
-                    setFile(null);
+                    setFiles([]);
                   }}
-                  className="bg-green-600 px-4 py-2 rounded"
+                  className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow"
                 >
-                  ➕ Hinzufügen
+                  <span className="text-lg">➕</span> Hinzufügen
                 </button>
 
                 <button
                   onClick={handleSaveView}
-                  className="bg-blue-700 px-3 py-1 rounded"
+                  className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg shadow"
                   disabled={prefsLoading}
                   title="Aktuelle Ansicht (Filter) dauerhaft speichern"
                 >
-                  Ansicht speichern
+                  💾 Ansicht speichern
                 </button>
 
-                <button
-                  onClick={resetFilters}
-                  className="bg-gray-600 px-3 py-1 rounded"
-                  disabled={prefsLoading}
-                  title="Filter zurücksetzen"
-                >
-                  Reset
-                </button>
-
-                <button
-                  onClick={() => {
-                    fetchSeq.current++;
-                  }}
-                  className="bg-gray-700 px-3 py-1 rounded"
-                  title="Liste manuell aktualisieren"
-                >
-                  Aktualisieren
-                </button>
+                {/* Reset und Aktualisieren entfernt - nur Ansicht speichern bleibt */}
               </div>
             )}
           </div>
@@ -796,11 +807,11 @@ export default function Dashboard({ user, onLogout }) {
           {activeTab !== "wiederkehrend" && formVisible && (
             <form
               onSubmit={handleSubmit}
-              className="bg-gray-800 p-4 rounded space-y-4 mb-6"
+              className="bg-gradient-to-b from-gray-800 to-gray-900 p-5 rounded-lg space-y-4 mb-6 shadow-inner border border-gray-700"
               encType="multipart/form-data"
             >
               <select
-                className="w-full p-2 bg-gray-700 rounded"
+                className="w-full p-2 bg-gray-700 rounded-md focus:ring-2 focus:ring-blue-400"
                 value={formData.kategorie}
                 onChange={(e) =>
                   setFormData({ ...formData, kategorie: e.target.value })
@@ -814,7 +825,7 @@ export default function Dashboard({ user, onLogout }) {
                 ))}
               </select>
               <input
-                className="w-full p-2 bg-gray-700 rounded"
+                className="w-full p-2 bg-gray-700 rounded-md focus:ring-2 focus:ring-blue-400"
                 placeholder="Titel"
                 value={formData.titel}
                 onChange={(e) =>
@@ -822,7 +833,7 @@ export default function Dashboard({ user, onLogout }) {
                 }
               />
               <textarea
-                className="w-full p-2 bg-gray-700 rounded"
+                className="w-full p-2 bg-gray-700 rounded-md focus:ring-2 focus:ring-blue-400 min-h-[100px]"
                 placeholder="Beschreibung"
                 value={formData.beschreibung}
                 onChange={(e) =>
@@ -830,7 +841,7 @@ export default function Dashboard({ user, onLogout }) {
                 }
               />
               <select
-                className="w-full p-2 bg-gray-700 rounded"
+                className="w-full p-2 bg-gray-700 rounded-md focus:ring-2 focus:ring-blue-400"
                 value={formData.priorität}
                 onChange={(e) =>
                   setFormData({ ...formData, priorität: e.target.value })
@@ -864,39 +875,86 @@ export default function Dashboard({ user, onLogout }) {
                 </select>
               )}
 
-              <div
-                ref={dropRef}
-                onDragOver={handleDragOver}
-                onDragLeave={handleDragLeave}
-                onDrop={handleDrop}
-                className={`w-full p-6 bg-gray-700 border-2 border-dashed rounded text-center text-gray-400 cursor-pointer ${
-                  file ? "border-green-500" : "border-gray-600"
-                }`}
-              >
-                {file ? (
-                  <div>
-                    📎 Datei ausgewählt: <strong>{file.name}</strong>{" "}
-                    <button
-                      type="button"
-                      className="ml-2 text-red-500 underline"
-                      onClick={() => setFile(null)}
-                    >
-                      Entfernen
-                    </button>
-                  </div>
-                ) : (
-                  <>Datei hierher ziehen (Drag & Drop)</>
-                )}
+              <div className="w-full">
+                <div
+                  ref={dropRef}
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                  className={`w-full p-6 bg-gradient-to-br from-gray-700 to-gray-800 border-2 border-dashed rounded-lg text-center text-gray-300 cursor-pointer ${
+                    files && files.length ? "border-green-500" : "border-gray-600"
+                  }`}
+                >
+                  {previews && previews.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-3 justify-center">
+                      {previews.map((p, i) => (
+                        <div key={i} className="relative w-24 h-24 rounded overflow-hidden bg-gray-800/40 flex items-center justify-center">
+                          {p.url ? (
+                            <img src={p.url} alt={p.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="text-xs text-gray-300 px-2 text-center">{p.name}</div>
+                          )}
+                          <button
+                            type="button"
+                            className="absolute top-1 right-1 bg-black/50 text-white text-xs rounded px-1"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setFiles((prev) => prev.filter((_, idx) => idx !== i));
+                              setPreviews((prev) => {
+                                const next = prev.filter((_, idx) => idx !== i);
+                                // revoke removed
+                                if (prev[i]?.url) URL.revokeObjectURL(prev[i].url);
+                                return next;
+                              });
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm">Dateien hierher ziehen (Drag & Drop) oder klicken, um Dateien auszuwählen</div>
+                  )}
+                </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const fArr = Array.from(e.target.files || []);
+                      setFiles(fArr);
+                      setPreviews((prev) => {
+                        (prev || []).forEach((p) => p.url && URL.revokeObjectURL(p.url));
+                        return fArr.map((f) => ({ name: f.name, url: f.type?.startsWith("image/") ? URL.createObjectURL(f) : null, type: f.type }));
+                      });
+                    }}
+                  />
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => setFiles(Array.from(e.target.files || []))}
+              />
 
               <div className="flex space-x-2">
-                <button type="submit" className="bg-blue-600 px-4 py-2 rounded">
-                  Speichern
+                <button type="submit" disabled={isSubmitting} className={`flex items-center gap-2 justify-center bg-blue-600 px-4 py-2 rounded ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}>
+                  {isSubmitting ? (
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                  ) : (
+                    <span>💾</span>
+                  )}
+                  <span>{isSubmitting ? 'Speichert…' : 'Speichern'}</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setFormVisible(false)}
-                  className="bg-gray-600 px-4 py-2 rounded"
+                  disabled={isSubmitting}
+                  className={`bg-gray-600 px-4 py-2 rounded ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
                 >
                   Schließen
                 </button>
@@ -923,7 +981,7 @@ export default function Dashboard({ user, onLogout }) {
                 return (
                   <div
                     key={item.id ?? index}
-                    className="bg-gray-800 p-3 rounded flex justify-between items-center cursor-pointer"
+                    className="bg-gradient-to-br from-gray-800 to-gray-900 p-4 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center cursor-pointer hover:shadow-lg transform transition-transform hover:-translate-y-0.5"
                     onDoubleClick={() =>
                       setData((old) =>
                         old.map((d, i) =>
@@ -1005,6 +1063,19 @@ export default function Dashboard({ user, onLogout }) {
                         <>
                           <div className="text-sm text-gray-300 mt-1">
                             {item.beschreibung}
+                          </div>
+                          <div className="mt-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setData((old) =>
+                                  old.map((d, i) => (i === index ? { ...d, expanded: false } : d))
+                                );
+                              }}
+                              className="text-xs text-blue-300 underline mt-2"
+                            >
+                              Weniger
+                            </button>
                           </div>
                           <div className="text-xs text-gray-400 mt-1">
                             {item.kategorie} | Priorität: {item.priorität} | Von{" "}
@@ -1130,8 +1201,23 @@ export default function Dashboard({ user, onLogout }) {
                       ) : (
                         <>
                           <div className="text-sm text-gray-400">
-                            {item.beschreibung?.slice(0, 60)}…
+                            {item.beschreibung && item.beschreibung.length > SHORT_DESC_LEN
+                              ? item.beschreibung.slice(0, SHORT_DESC_LEN) + "..."
+                              : item.beschreibung}
                           </div>
+                          {item.beschreibung && item.beschreibung.length > SHORT_DESC_LEN && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setData((old) =>
+                                  old.map((d, i) => (i === index ? { ...d, expanded: true } : d))
+                                );
+                              }}
+                              className="text-xs text-blue-300 underline mt-2"
+                            >
+                              Mehr
+                            </button>
+                          )}
                           <div className="mt-1">
                             <StatusBadge item={item} compact />
                           </div>
@@ -1139,14 +1225,14 @@ export default function Dashboard({ user, onLogout }) {
                       )}
                     </div>
 
-                    <div className="flex gap-2 items-center">
+                    <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center mt-3 sm:mt-0">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleCompleted(index);
                         }}
-                        className={`px-2 py-1 rounded text-xs ${
-                          item.completed ? "bg-gray-600" : "bg-green-600"
+                        className={`px-3 py-1 rounded-md text-sm font-medium transition ${
+                          item.completed ? "bg-gray-600 text-white" : "bg-green-600 text-white"
                         }`}
                       >
                         {item.completed ? "Rückgängig" : "Erledigt"}
@@ -1156,7 +1242,7 @@ export default function Dashboard({ user, onLogout }) {
                           e.stopPropagation();
                           handleEdit(index);
                         }}
-                        className="px-2 py-1 rounded text-xs bg-yellow-600"
+                        className="px-3 py-1 rounded-md text-sm bg-yellow-500 hover:bg-yellow-400"
                       >
                         Bearbeiten
                       </button>
@@ -1165,7 +1251,7 @@ export default function Dashboard({ user, onLogout }) {
                           e.stopPropagation();
                           handleDelete(index);
                         }}
-                        className="px-2 py-1 rounded text-xs bg-red-600"
+                        className="px-3 py-1 rounded-md text-sm bg-red-600 hover:bg-red-500 text-white"
                       >
                         Löschen
                       </button>

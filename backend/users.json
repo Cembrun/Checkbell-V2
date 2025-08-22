@@ -15,7 +15,25 @@
       "meldungen:Leitstand": {
         "status": "offen",
         "kategorie": "alle",
-        "date": "today",
+        "date": "all",
+        "sort": "desc"
+      },
+      "meldungen:Technik": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "tasks:Technik": {
+        "status": "offen",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "tasks:Qualität": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
         "sort": "desc"
       }
     }
@@ -56,6 +74,39 @@
         "status": "alle",
         "kategorie": "alle",
         "date": "today",
+        "sort": "desc"
+      }
+    }
+  },
+  {
+    "username": "123",
+    "password": "$2b$10$ta8KUUZxjAS8ghqrSPQuPeA1xP3bsO1R5SRiHNy9rXLWi1/6d8H0K",
+    "isAdmin": true,
+    "mustChangePassword": true,
+    "createdAt": "2025-08-22T11:14:32.638Z",
+    "preferences": {
+      "meldungen:Leitstand": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "today",
+        "sort": "desc"
+      },
+      "tasks:Leitstand": {
+        "status": "offen",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "tasks:Technik": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "meldungen:Technik": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
         "sort": "desc"
       }
     }

@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "kategorie": "Betrieb",
+    "titel": "riemenriss",
+    "beschreibung": "oben og2 roiemenriss",
+    "priorität": "hoch",
+    "zielAbteilung": "Technik",
+    "erstelltVon": "admin",
+    "erstelltAm": "22.8.2025, 13:11:07",
+    "status": "erledigt",
+    "id": "memqceax9xbjm9",
+    "createdAt": "2025-08-22T11:11:07.113Z",
+    "quelleAbteilung": "Technik",
+    "completed": true,
+    "completedAt": "2025-08-22T11:38:55.326Z",
+    "notizen": [],
+    "anhaenge": [],
+    "erledigtVon": "123"
+  }
+]

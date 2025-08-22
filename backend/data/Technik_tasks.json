@@ -1,101 +1,5 @@
 [
   {
-    "kategorie": "Technik",
-    "titel": "Riemenriss og1",
-    "beschreibung": "rieemenriss",
-    "priorität": "hoch",
-    "zielAbteilung": null,
-    "erstelltVon": "Admin",
-    "erstelltAm": "17.8.2025, 21:20:47",
-    "status": "erledigt",
-    "id": "meg2munb0a1r9p",
-    "quelleAbteilung": "Leitstand",
-    "completed": true,
-    "completedAt": "2025-08-17T19:21:43.985Z",
-    "notizen": [
-      {
-        "autor": "Technik",
-        "text": "rimen ersetzt",
-        "zeit": "17.8.2025, 21:17:31"
-      },
-      {
-        "autor": "Technik",
-        "text": "noch nicht gut",
-        "zeit": "17.8.2025, 21:19:22"
-      },
-      {
-        "autor": "Admin",
-        "text": "noch nicht gut ",
-        "zeit": "17.8.2025, 21:20:11"
-      },
-      {
-        "autor": "Admin",
-        "text": "jetzt erledigt amk",
-        "zeit": "17.8.2025, 21:21:42"
-      }
-    ],
-    "erledigtVon": "Admin",
-    "originalId": "meg2hwome2y9d9"
-  },
-  {
-    "kategorie": "Technik",
-    "titel": "PCO2 Rolle defekt",
-    "beschreibung": "Rolledreht nicht bei f12",
-    "priorität": "mittel",
-    "zielAbteilung": null,
-    "erstelltVon": "Admin",
-    "erstelltAm": "17.8.2025, 21:43:36",
-    "status": "erledigt",
-    "id": "meg3alwhsd6fh4",
-    "quelleAbteilung": "Technik",
-    "completed": true,
-    "completedAt": "2025-08-17T21:09:24.500Z",
-    "notizen": [
-      {
-        "autor": "Admin",
-        "text": "erledigt",
-        "zeit": "17.8.2025, 21:41:30"
-      }
-    ],
-    "originalId": "meg3ag848cjcm0",
-    "erledigtVon": "Admin",
-    "expanded": false,
-    "anhangDateiUrl": "/uploads/1755459816950_2023-2-12_16-52-8-596.BMP"
-  },
-  {
-    "kategorie": "Technik",
-    "titel": "PCO2 Rolle defekt",
-    "beschreibung": "Rolledreht nicht bei f12",
-    "priorität": "mittel",
-    "zielAbteilung": null,
-    "erstelltVon": "Technik",
-    "erstelltAm": "17.8.2025, 21:50:18",
-    "status": "erledigt",
-    "id": "meg3otgrntwew0",
-    "quelleAbteilung": "Leitstand",
-    "completed": true,
-    "completedAt": "2025-08-17T19:51:02.721Z",
-    "notizen": [
-      {
-        "autor": "Admin",
-        "text": "erledigt",
-        "zeit": "17.8.2025, 21:41:30"
-      },
-      {
-        "autor": "Admin",
-        "text": "noch nicht gut ",
-        "zeit": "17.8.2025, 21:50:14"
-      },
-      {
-        "autor": "Admin",
-        "text": "eetz schon amk",
-        "zeit": "17.8.2025, 21:51:01"
-      }
-    ],
-    "erledigtVon": "Admin",
-    "originalId": "meg3ag848cjcm0"
-  },
-  {
     "kategorie": "",
     "titel": "vfvf",
     "beschreibung": "vfvfvfvfvf",
@@ -206,5 +110,30 @@
     "anhaenge": [],
     "erledigtVon": "admin",
     "originalId": "mek3863ilqmmja"
+  },
+  {
+    "kategorie": "Technik",
+    "titel": "stuhl kapput",
+    "beschreibung": "",
+    "priorität": "",
+    "zielAbteilung": null,
+    "erstelltVon": "admin",
+    "erstelltAm": "22.8.2025, 13:48:29",
+    "status": "erledigt",
+    "id": "memrogsh67e6fm",
+    "createdAt": "2025-08-22T11:48:29.825Z",
+    "quelleAbteilung": "Leitstand",
+    "completed": true,
+    "completedAt": "2025-08-22T11:48:57.361Z",
+    "notizen": [
+      {
+        "autor": "admin",
+        "text": "erledigt stuhl repariert",
+        "zeit": "22.8.2025, 13:48:55"
+      }
+    ],
+    "anhaenge": [],
+    "originalId": "memroapuc26sbn",
+    "erledigtVon": "admin"
   }
 ]

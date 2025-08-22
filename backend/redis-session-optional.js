@@ -5,7 +5,7 @@
 import session from 'express-session';
 import { createRequire } from 'module';
 
-export function makeSessionMiddleware(options = {}) {
+export async function makeSessionMiddleware(options = {}) {
   const redisUrl = process.env.REDIS_URL;
   const secret = process.env.SESSION_SECRET || 'dev-secret-change-me';
 
@@ -35,7 +35,7 @@ export function makeSessionMiddleware(options = {}) {
     const connectRedisMod = require('connect-redis');
     const IORedis = require('ioredis');
     // Provide explicit TLS and retry/connect options that work better with Upstash
-    const client = new IORedis(redisUrl, {
+  const client = new IORedis(redisUrl, {
       tls: {},
       // reduce noisy retry loop; RedisStore will work with a connected client
       maxRetriesPerRequest: 5,
@@ -44,7 +44,6 @@ export function makeSessionMiddleware(options = {}) {
       // exponential backoff for reconnects
       retryStrategy: (times) => Math.min(1000 * 2 ** times, 30000),
     });
-
     // Helpful logs for deployment verification
     client.on('connect', () => {
       console.log('redis-session-optional: Redis client connect');
@@ -58,6 +57,17 @@ export function makeSessionMiddleware(options = {}) {
     client.on('error', (err) => {
       console.error('redis-session-optional: Redis client error:', err && err.message ? err.message : err);
     });
+
+    // Quick connectivity check: ping with timeout to avoid long blocking on startup
+    const pingPromise = client.ping();
+    const timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('PING_TIMEOUT')), 2500));
+    try {
+      await Promise.race([pingPromise, timeout]);
+    } catch (e) {
+      console.error('redis-session-optional: Redis ping failed, falling back to memory store:', e && e.message ? e.message : e);
+      try { client.disconnect(); } catch {}
+      return session(baseOpts);
+    }
 
     // connect-redis has changed export shapes across versions. Try common patterns:
     try {

@@ -204,7 +204,8 @@ function useServerSavedFilters(username, opts = {}) {
 const DEFAULT_DEPARTMENTS = ["Leitstand", "Technik", "Qualität", "Logistik"];
 const TABS = ["tasks", "meldungen", "wiederkehrend"];
 const KATS = ["Betrieb", "Technik", "IT"];
-const API = "http://localhost:4000";
+// allow overriding the backend URL in production via Vite env var
+const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 // Helpers
 const isImageExt = (url) => /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url || "");

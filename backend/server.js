@@ -9,20 +9,15 @@ import multer from "multer";
 import session from "express-session";
 
 const app = express();
-const PORT = 4000;
+const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
 const USERS_FILE = "./users.json";
 const DATA_DIR = "./data";
 const UPLOAD_DIR = "./uploads";
 const ARCHIVE_SUFFIX = "_archive.json"; // z.B. Technik_archive.json
-const CLIENT_ORIGINS = [
-  process.env.CLIENT_ORIGIN || "http://localhost:5173",
-  "http://localhost:5174",
-  // Vite dev server on port 74 (user preference)
-  "http://localhost:74",
-  "https://checkbellapp.vercel.app",
-  "https://checkbellapp.vercel.app/",
-];
+// Allowed client origins. Can be a comma-separated env var FRONTEND_URLS or single FRONTEND_URL.
+const envFrontend = process.env.FRONTEND_URLS || process.env.FRONTEND_URL || process.env.CLIENT_ORIGIN || "http://localhost:5173,http://localhost:5174,http://localhost:74";
+const CLIENT_ORIGINS = envFrontend.split(",").map((s) => s.trim()).filter(Boolean);
 
 // Abteilungen (persistiert in departments.json)
 const DEPARTMENTS_FILE = path.join('.', 'departments.json');

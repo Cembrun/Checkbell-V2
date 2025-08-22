@@ -70,7 +70,22 @@ const authLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, message: { message:
 app.use(bodyParser.json());
 
 // Sessions (MemoryStore für Dev oder Redis wenn REDIS_URL gesetzt)
-app.use(makeSessionMiddleware());
+try {
+  app.use(makeSessionMiddleware());
+} catch (e) {
+  console.error('Session middleware initialization failed, falling back to in-memory sessions:', e && e.message ? e.message : e);
+  // dynamic import to avoid top-level require issues in ESM
+  (async () => {
+    const mod = await import('express-session');
+    const fallback = mod && mod.default ? mod.default : mod;
+    app.use(fallback({
+      secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
+      resave: false,
+      saveUninitialized: false,
+      cookie: { httpOnly: true, sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax', secure: process.env.NODE_ENV === 'production' },
+    }));
+  })().catch((err) => console.error('Failed to initialize fallback session middleware:', err));
+}
 
 // Static /uploads mit passenden Headern
 // Serve uploads but restrict CORS exposure

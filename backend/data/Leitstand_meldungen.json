@@ -22,40 +22,5 @@
     ],
     "anhaenge": [],
     "erledigtVon": "admin"
-  },
-  {
-    "kategorie": "Betrieb",
-    "titel": "Test Bilder ",
-    "beschreibung": "Ich probiere mehrere Bilder hochzuladen ",
-    "priorität": "hoch",
-    "zielAbteilung": "",
-    "erstelltVon": "admin",
-    "erstelltAm": "20.8.2025, 23:29:24",
-    "status": "erledigt",
-    "id": "mekhjt4am9vwo4",
-    "createdAt": "2025-08-20T21:29:24.010Z",
-    "quelleAbteilung": "Leitstand",
-    "completed": true,
-    "completedAt": "2025-08-20T21:32:05.436Z",
-    "notizen": [],
-    "anhaenge": [
-      {
-        "name": "Screenshot 2025-08-20 205951.png",
-        "url": "/uploads/1755725364008_Screenshot 2025-08-20 205951.png",
-        "type": "image/png"
-      },
-      {
-        "name": "Screenshot 2025-08-20 210027.png",
-        "url": "/uploads/1755725364008_Screenshot 2025-08-20 210027.png",
-        "type": "image/png"
-      },
-      {
-        "name": "Screenshot 2025-08-19 220809.png",
-        "url": "/uploads/1755725364009_Screenshot 2025-08-19 220809.png",
-        "type": "image/png"
-      }
-    ],
-    "anhangDateiUrl": "/uploads/1755725364008_Screenshot 2025-08-20 205951.png",
-    "erledigtVon": "admin"
   }
 ]

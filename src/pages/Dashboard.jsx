@@ -1,32 +1,218 @@
 // src/pages/Dashboard.jsx
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { useState, useEffect, useRef, useMemo } from "react";
-import StatusBadge from "../components/StatusBadge";
-import { exportSinglePDFWithImages } from "../utils/pdfExport";
+/* =========================
+   Inline: StatusBadge
+   ========================= */
+function StatusBadge({ item, compact = false }) {
+  const isDone = item.status === "erledigt" || item.completed;
+  const ts = item.completedAt || item.erledigtAm || item.updatedAt || item.createdAt;
+  const when =
+    ts &&
+    (function () {
+      try {
+        return new Date(ts).toLocaleString("de-DE");
+      } catch {
+        return "";
+      }
+    })();
 
-const departments = ["Leitstand", "Technik", "Qualität", "Logistik"];
-const tabs = ["tasks", "meldungen", "Wiederkehrend"];
-const kategorien = [
-  "Anlage",
-  "IT",
-  "Haustechnik",
-  "Elektrisch",
-  "OT",
-  "Betrieb"
-];
+  if (compact) {
+    return (
+      <span
+        className={`inline-block text-[11px] px-2 py-0.5 rounded ${
+          isDone ? "bg-green-700" : "bg-yellow-700"
+        }`}
+      >
+        {isDone ? "erledigt" : "offen"}
+      </span>
+    );
+  }
 
-const API = "https://bell-5s68.onrender.com";
+  return (
+    <div
+      className={`inline-flex items-center gap-2 px-2 py-1 rounded ${
+        isDone ? "bg-green-700" : "bg-yellow-700"
+      }`}
+    >
+      <strong>{isDone ? "Erledigt" : "Offen"}</strong>
+      {when && <span className="text-xs opacity-90">{when}</span>}
+      {item.erledigtVon && (
+        <span className="text-xs opacity-90">von {item.erledigtVon}</span>
+      )}
+    </div>
+  );
+}
 
-// ----------------- Helper -----------------
+/* =========================
+   Inline: useServerSavedFilters (JS)
+   - speichert Prefs auf Server + localStorage
+   - bietet saveNow() für "Ansicht speichern"
+   ========================= */
+function useServerSavedFilters(username, opts = {}) {
+  const scope = opts.scope || "meldungen";
+  const version = typeof opts.version === "number" ? opts.version : 1;
+  const debounceMs =
+    typeof opts.debounceMs === "number" ? opts.debounceMs : 250;
+
+  const BASE_DEFAULTS = {
+    status: "alle",
+    kategorie: "alle",
+    date: "all",
+    sort: "desc",
+  };
+  const defaults = useMemo(
+    () => ({ ...BASE_DEFAULTS, ...(opts.defaults || {}) }),
+    [opts.defaults]
+  );
+
+  const [filters, setFilters] = useState(defaults);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [lastSavedAt, setLastSavedAt] = useState(null);
+  const firstSync = useRef(true);
+
+  const LS_KEY = `checkbell:prefs:${username}:${scope}`;
+
+  const fetchJSON = async (url, init) => {
+    const res = await fetch(url, {
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        ...(init && init.headers ? init.headers : {}),
+      },
+      ...(init || {}),
+    });
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error(t || `HTTP ${res.status}`);
+    }
+    return res.json();
+  };
+
+  const sanitize = (input, defs) => {
+    if (!input || typeof input !== "object") return defs;
+    const safeSort = (x, fb) => (x === "asc" || x === "desc" ? x : fb);
+    const safeStr = (x, fb) => (typeof x === "string" && x ? x : fb);
+    return {
+      status: safeStr(input.status, defs.status),
+      kategorie: safeStr(input.kategorie, defs.kategorie),
+      date: safeStr(input.date, defs.date),
+      sort: safeSort(input.sort, defs.sort),
+    };
+  };
+
+  const readLocal = () => {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      if (!raw) return defaults;
+      const parsed = JSON.parse(raw);
+      return sanitize(parsed?.data, defaults);
+    } catch {
+      return defaults;
+    }
+  };
+  const writeLocal = (f) => {
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify({ __v: version, data: f }));
+    } catch {}
+  };
+
+  // Load on mount / username/scope change
+  useEffect(() => {
+    let abort = false;
+    (async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const prefs = await fetchJSON(
+          `http://localhost:4000/api/users/${encodeURIComponent(
+            username
+          )}/prefs`
+        );
+        const loaded = sanitize(prefs?.[scope], defaults);
+        if (!abort) {
+          setFilters(loaded);
+          writeLocal(loaded);
+        }
+      } catch {
+        const local = readLocal();
+        if (!abort) setFilters(local);
+      } finally {
+        if (!abort) setLoading(false);
+      }
+    })();
+    return () => {
+      abort = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [username, scope, version]);
+
+  // Debounced auto-save to server
+  useEffect(() => {
+    if (loading) return;
+    if (firstSync.current) {
+      firstSync.current = false;
+      return;
+    }
+    const t = setTimeout(async () => {
+      try {
+        writeLocal(filters);
+        await fetchJSON(
+          `http://localhost:4000/api/users/${encodeURIComponent(
+            username
+          )}/prefs`,
+          { method: "PATCH", body: JSON.stringify({ [scope]: filters }) }
+        );
+        setLastSavedAt(Date.now());
+      } catch (e) {
+        setError(e?.message || "Speichern fehlgeschlagen");
+      }
+    }, debounceMs);
+    return () => clearTimeout(t);
+  }, [filters, loading, username, scope, debounceMs]);
+
+  // Manual save (for "Ansicht speichern" button)
+  const saveNow = async () => {
+    try {
+      writeLocal(filters);
+      await fetchJSON(
+        `http://localhost:4000/api/users/${encodeURIComponent(
+          username
+        )}/prefs`,
+        { method: "PATCH", body: JSON.stringify({ [scope]: filters }) }
+      );
+      setLastSavedAt(Date.now());
+      return true;
+    } catch (e) {
+      setError(e?.message || "Speichern fehlgeschlagen");
+      return false;
+    }
+  };
+
+  const reset = () => setFilters(defaults);
+
+  return { filters, setFilters, loading, error, reset, saveNow, lastSavedAt };
+}
+
+/* =========================
+   Dashboard (selbst-enthaltend)
+   ========================= */
+const DEPARTMENTS = ["Leitstand", "Technik", "Qualität", "Logistik"];
+const TABS = ["tasks", "meldungen", "wiederkehrend"];
+const KATS = ["Betrieb", "Technik", "IT"];
+const API = "http://localhost:4000";
+
+// Helpers
 const isImageExt = (url) => /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url || "");
 const absUploadUrl = (u) => {
   if (!u) return "";
   if (u.startsWith("http://") || u.startsWith("https://")) return u;
   return `${API}${u.startsWith("/") ? u : "/" + u}`;
 };
-
 const fmtOnceDate = (yyyyMMdd) => {
-  if (!yyyyMMdd || typeof yyyyMMdd !== "string" || !yyyyMMdd.includes("-")) return "Datum fehlt";
+  if (!yyyyMMdd || typeof yyyyMMdd !== "string" || !yyyyMMdd.includes("-"))
+    return "Datum fehlt";
   const [y, m, d] = yyyyMMdd.split("-");
   return `${d}.${m}.${y}`;
 };
@@ -45,56 +231,16 @@ const fmtDateTime = (iso) => {
   }
 };
 
-// ============ Component ============
 export default function Dashboard({ user, onLogout }) {
-
-  // PDF-Export für einzelne Meldung (mit Bildern)
-  async function exportSinglePDF(item) {
-    await exportSinglePDFWithImages(item);
-  }
-  const [activeDepartment, setActiveDepartment] = useState(departments[0]);
+  const [activeDepartment, setActiveDepartment] = useState(DEPARTMENTS[0]);
   const [activeTab, setActiveTab] = useState("tasks");
-  const [errorMsg, setErrorMsg] = useState("");
-  // Hilfsfunktion zum Laden gespeicherter Filter
-  async function loadSavedFilters() {
-    try {
-      setErrorMsg("");
-      const res = await fetch(`http://localhost:4000/api/users/${encodeURIComponent(user.username)}/prefs`, {
-        credentials: "include"
-      });
-      if (!res.ok) {
-        if (res.status === 403) setErrorMsg("Keine Berechtigung. Bitte neu einloggen.");
-        else if (res.status === 404) setErrorMsg("Benutzer nicht gefunden.");
-        else setErrorMsg("Fehler beim Laden der Filter: " + res.status);
-        return;
-      }
-      const prefs = await res.json();
-      const key = `${activeTab}:${activeDepartment}`;
-      if (prefs && prefs[key]) {
-        setFilter((prev) => ({ ...prev, ...prefs[key] }));
-      }
-    } catch (e) {
-      setErrorMsg("Server nicht erreichbar oder Netzwerkfehler.");
-    }
-  }
 
-  // Lade gespeicherte Filter beim ersten Mount oder wenn Abteilung/Tab wechselt
-  useEffect(() => {
-    loadSavedFilters();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeDepartment, activeTab]);
-  // Filter-Ansicht lokal
-  const [filter, setFilter] = useState({
-    status: "alle",
-    kategorie: "alle",
-    date: "all",
-    sort: "desc",
-  });
-  const [saveMsg, setSaveMsg] = useState("");
   const [data, setData] = useState([]);
+  const [listLoading, setListLoading] = useState(false);
+  const [listError, setListError] = useState("");
+
   const [formVisible, setFormVisible] = useState(false);
   const [editingIndex, setEditingIndex] = useState(null);
-
   const [formData, setFormData] = useState({
     kategorie: "",
     titel: "",
@@ -102,136 +248,165 @@ export default function Dashboard({ user, onLogout }) {
     priorität: "",
     zielAbteilung: "",
   });
-  const [files, setFiles] = useState([]);
+  const [file, setFile] = useState(null);
   const dropRef = useRef();
 
   const [weiterleitenIndex, setWeiterleitenIndex] = useState(null);
   const [weiterleitenZiel, setWeiterleitenZiel] = useState("");
-
   const [notizText, setNotizText] = useState("");
   const [activeNotizIndex, setActiveNotizIndex] = useState(null);
 
   // Wiederkehrend – Vorlagen
   const [recList, setRecList] = useState([]);
   const [recForm, setRecForm] = useState({
-    id: null,               // wenn gesetzt => PUT
+    id: null,
     titel: "",
     beschreibung: "",
     zeit: "07:00",
-    intervall: "daily",     // "daily" | "once"
-    dueDate: "",            // YYYY-MM-DD (bei once)
+    intervall: "daily",
+    dueDate: "",
     anleitungUrl: "",
-    vorlaufMin: 120,        // Minuten früher sichtbar
-    cooldownHours: 8,       // Stunden nach Erledigung bis nächste Instanz
+    vorlaufMin: 120,
+    cooldownHours: 8,
   });
   const [recUploadFile, setRecUploadFile] = useState(null);
 
-  // Preview-Modal für Anhänge
-  const [preview, setPreview] = useState(null); // { url, isImage, name }
+  // Preview
+  const [preview, setPreview] = useState(null);
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && setPreview(null);
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // ---------- Server-gespeicherte Filter (pro Tab & Abteilung) ----------
-  // Für "wiederkehrend" verwenden wir die gleichen Filter wie "tasks"
-  const effectiveTabForScope = activeTab === "wiederkehrend" ? "tasks" : activeTab;
+  // Gespeicherte Filter (Scope = Tab/Abteilung, „wiederkehrend“ nutzt „tasks“-Scope)
+  const effectiveTabForScope =
+    activeTab === "wiederkehrend" ? "tasks" : activeTab;
   const scope = useMemo(
     () => `${effectiveTabForScope}:${activeDepartment}`,
     [effectiveTabForScope, activeDepartment]
   );
+  const {
+    filters: savedFilters,
+    setFilters: setSavedFilters,
+    loading: prefsLoading,
+    error: prefsError,
+    reset: resetFilters,
+    saveNow,
+  } = useServerSavedFilters(user.username, {
+    scope,
+    version: 1,
+    defaults: { status: "alle", kategorie: "alle", date: "all", sort: "desc" },
+  });
 
-  const activeFilter = filter;
-  const updateFilter = (key, value) => setFilter((prev) => ({ ...prev, [key]: value }));
-  const resetFilters = () => setFilter({ status: "alle", kategorie: "alle", date: "all", sort: "desc" });
-  // Ansicht speichern
-  const saveFilters = async () => {
-    try {
-      await fetch(`http://localhost:4000/api/users/${encodeURIComponent(user.username)}/prefs`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ [`${activeTab}:${activeDepartment}`]: filter }),
-        credentials: "include",
-      });
-      setSaveMsg("Ansicht gespeichert!");
-      setTimeout(() => setSaveMsg(""), 2000);
-    } catch (e) {
-      setSaveMsg("Fehler beim Speichern");
-      setTimeout(() => setSaveMsg(""), 2000);
+  // „Gespeichert!“ Toast
+  const [justSaved, setJustSaved] = useState(false);
+  const handleSaveView = async () => {
+    const ok = await saveNow();
+    if (ok) {
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 1500);
     }
   };
 
-  // ---------- Anti-Zittern: Debounce + Sperre während Interaktion ----------
-  const [suspendReload, setSuspendReload] = useState(false);
-  const fetchTimer = useRef(null);
-  const scheduleFetch = () => {
-    if (fetchTimer.current) clearTimeout(fetchTimer.current);
-  if (suspendReload) return;
-    fetchTimer.current = setTimeout(() => {
-      fetchData();
-    }, 200);
-  };
+  // Fetch-Trigger stabil halten
+  const fetchKey = useMemo(
+    () =>
+      JSON.stringify({
+        dep: activeDepartment,
+        tab: activeTab,
+        status: savedFilters.status,
+        date: savedFilters.date,
+        sort: savedFilters.sort,
+        kat: savedFilters.kategorie,
+      }),
+    [
+      activeDepartment,
+      activeTab,
+      savedFilters.status,
+      savedFilters.date,
+      savedFilters.sort,
+      savedFilters.kategorie,
+    ]
+  );
 
-  // --------- Laden Tasks/Meldungen ---------
-  const fetchData = async () => {
-    if (!activeDepartment) return;
-    if (activeTab === "wiederkehrend") {
-      fetchRecurring();
-      return;
-    }
-    try {
-      const params = new URLSearchParams();
-      const isLeitstandMeldungen =
-        activeDepartment === "Leitstand" && activeTab === "meldungen";
+  // Sequenz zum Abbrechen/Überschreiben
+  const fetchSeq = useRef(0);
 
-      if (!isLeitstandMeldungen && activeFilter.status !== "alle") {
-        params.set("status", activeFilter.status);
-      }
-      if (activeFilter.date !== "all") params.set("day", activeFilter.date);
-      if (activeFilter.sort === "asc") params.set("sort", "asc");
-
-      const url = `${API}/api/${activeDepartment}/${activeTab}${
-        params.toString() ? "?" + params.toString() : ""
-      }`;
-
-      const res = await fetch(url);
-      const json = await res.json();
-      setData(Array.isArray(json) ? json : []);
-    } catch (err) {
-      console.error("Ladefehler:", err);
-      setData([]);
-    }
-  };
-
-  // --------- Laden Wiederkehrend ---------
-  const fetchRecurring = async () => {
-    try {
-      const r = await fetch(`${API}/api/${activeDepartment}/recurring`);
-      setRecList(await r.json());
-    } catch {
-      setRecList([]);
-    }
-  };
-
-  // Nur laden, wenn Filter fertig sind & kein Interaktionsmodus
   useEffect(() => {
-    scheduleFetch();
-    return () => {
-      if (fetchTimer.current) clearTimeout(fetchTimer.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    activeDepartment,
-    activeTab,
-    activeFilter.date,
-    activeFilter.sort,
-    activeFilter.status,
-  // prefsLoading entfernt
-    suspendReload,
-  ]);
+    if (prefsLoading) return; // erst laden, wenn Prefs da sind
 
-  // --------- Drag & Drop ---------
+    let cancelled = false;
+    const seq = ++fetchSeq.current;
+
+    const loadRecurring = async () => {
+      setListLoading(true);
+      setListError("");
+      try {
+        const r = await fetch(
+          `${API}/api/${activeDepartment}/recurring`,
+          { credentials: "include" }
+        );
+        const js = await r.json();
+        if (!cancelled && seq === fetchSeq.current)
+          setRecList(Array.isArray(js) ? js : []);
+      } catch {
+        if (!cancelled && seq === fetchSeq.current) setRecList([]);
+      } finally {
+        if (!cancelled && seq === fetchSeq.current) setListLoading(false);
+      }
+    };
+
+    const loadList = async () => {
+      setListLoading(true);
+      setListError("");
+      try {
+        const sp = new URLSearchParams();
+        const isLeitstandMeldungen =
+          activeDepartment === "Leitstand" && activeTab === "meldungen";
+
+        if (!isLeitstandMeldungen && savedFilters.status !== "alle") {
+          sp.set("status", savedFilters.status);
+        }
+        if (savedFilters.date !== "all") sp.set("day", savedFilters.date);
+        if (savedFilters.sort === "asc") sp.set("sort", "asc");
+
+        const url = `${API}/api/${activeDepartment}/${activeTab}${
+          sp.toString() ? "?" + sp.toString() : ""
+        }`;
+
+        const res = await fetch(url, { credentials: "include" });
+        const json = await res.json();
+
+        const filtered =
+          savedFilters.kategorie === "alle"
+            ? json
+            : (json || []).filter(
+                (x) =>
+                  String(x.kategorie || "").toLowerCase() ===
+                  savedFilters.kategorie.toLowerCase()
+              );
+
+        if (!cancelled && seq === fetchSeq.current) setData(filtered || []);
+      } catch (err) {
+        if (!cancelled && seq === fetchSeq.current) {
+          setListError(err?.message || "Laden fehlgeschlagen");
+          setData([]);
+        }
+      } finally {
+        if (!cancelled && seq === fetchSeq.current) setListLoading(false);
+      }
+    };
+
+    if (activeTab === "wiederkehrend") loadRecurring();
+    else loadList();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchKey, prefsLoading, activeDepartment, activeTab]);
+
+  // Drag&Drop
   const handleDragOver = (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -247,12 +422,12 @@ export default function Dashboard({ user, onLogout }) {
     e.stopPropagation();
     dropRef.current?.classList.remove("border-blue-400");
     if (e.dataTransfer.files?.length) {
-      setFiles((prev) => [...prev, ...Array.from(e.dataTransfer.files)]);
+      setFile(e.dataTransfer.files[0]);
       e.dataTransfer.clearData();
     }
   };
 
-  // --------- Anlegen Task/Meldung ---------
+  // CRUD (create/complete/delete/forward/note)
   const handleSubmit = async (e) => {
     e.preventDefault();
     const zielDep =
@@ -267,25 +442,23 @@ export default function Dashboard({ user, onLogout }) {
       status: "offen",
     };
 
-    const formPayload = new FormData();
-    formPayload.append("eintrag", JSON.stringify(eintrag));
-    files.forEach((f) => {
-      formPayload.append("anhangDateien", f);
-    });
+    const fd = new FormData();
+    fd.append("eintrag", JSON.stringify(eintrag));
+    if (file) fd.append("anhangDatei", file);
 
     try {
       const res = await fetch(`${API}/api/${zielDep}/${activeTab}`, {
         method: "POST",
-        body: formPayload,
+        body: fd,
+        credentials: "include",
       });
       if (!res.ok) throw new Error("Speichern fehlgeschlagen");
-    } catch (error) {
-      alert(error.message);
+    } catch (err) {
+      alert(err.message);
       return;
     }
 
     setFormVisible(false);
-    setSuspendReload(false);
     setFormData({
       kategorie: "",
       titel: "",
@@ -293,17 +466,21 @@ export default function Dashboard({ user, onLogout }) {
       priorität: "",
       zielAbteilung: "",
     });
-    setFiles([]);
+    setFile(null);
     setEditingIndex(null);
-    scheduleFetch(); // sanft nachladen
+
+    // manuell reload triggern
+    setTimeout(() => {
+      fetchSeq.current++;
+    }, 0);
   };
 
-  // --------- Löschen Task/Meldung ---------
   const handleDelete = async (index) => {
     const item = data[index];
     const tryDelete = (idOrIndex) =>
       fetch(`${API}/api/${activeDepartment}/${activeTab}/${idOrIndex}`, {
         method: "DELETE",
+        credentials: "include",
       });
 
     try {
@@ -321,36 +498,30 @@ export default function Dashboard({ user, onLogout }) {
     }
   };
 
-  // --------- Erledigt/Unerledigt ---------
   const toggleCompleted = async (index) => {
     const item = data[index];
     if (!item?.id) return alert("Kein Task-ID gefunden");
-
     const desiredCompleted = !Boolean(item.completed);
 
-    // 🔹 Optimistische UI
     const optimistic = {
       ...item,
       completed: desiredCompleted,
       status: desiredCompleted ? "erledigt" : "offen",
-      erledigtVon: desiredCompleted ? (user.username || "unbekannt") : item.erledigtVon,
+      erledigtVon: desiredCompleted
+        ? user.username || "unbekannt"
+        : item.erledigtVon,
       completedAt: desiredCompleted ? new Date().toISOString() : null,
     };
 
-    // 🔹 Sofort anzeigen / ggf. direkt ausblenden, wenn Filter nicht mehr passt
     setData((prev) => {
       const copy = [...prev];
-      const filter = activeFilter.status; // "alle" | "offen" | "erledigt"
+      const filter = savedFilters.status;
       const hides =
         filter !== "alle" &&
         ((filter === "offen" && optimistic.status === "erledigt") ||
           (filter === "erledigt" && optimistic.status === "offen"));
-
-      if (hides) {
-        copy.splice(index, 1);
-      } else {
-        copy[index] = optimistic;
-      }
+      if (hides) copy.splice(index, 1);
+      else copy[index] = optimistic;
       return copy;
     });
 
@@ -364,14 +535,15 @@ export default function Dashboard({ user, onLogout }) {
             completed: desiredCompleted,
             erledigtVon: user.username,
           }),
+          credentials: "include",
         }
       );
       if (!res.ok) throw new Error("Status-Update fehlgeschlagen");
-      // sanft neu laden (kleiner Delay, damit Server fertig schreibt)
-      setTimeout(() => !suspendReload && scheduleFetch(), 250);
     } catch (error) {
       alert(error.message || "Fehler beim Status-Update");
-      scheduleFetch();
+      setTimeout(() => {
+        fetchSeq.current++;
+      }, 0);
     }
   };
 
@@ -379,13 +551,12 @@ export default function Dashboard({ user, onLogout }) {
     setFormData(data[index]);
     setEditingIndex(index);
     setFormVisible(true);
-  setFiles([]);
-    setSuspendReload(true); // während des Bearbeitens nicht neu laden
+    setFile(null);
   };
 
-  // --------- Weiterleiten ---------
   const handleWeiterleiten = async (index) => {
-    if (!weiterleitenZiel) return alert("Bitte eine Zielabteilung auswählen!");
+    if (!weiterleitenZiel)
+      return alert("Bitte eine Zielabteilung auswählen!");
     const item = data[index];
     if (!item?.id) return alert("Kein Task/Meldungs-ID gefunden");
     try {
@@ -395,20 +566,21 @@ export default function Dashboard({ user, onLogout }) {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ zielAbteilung: weiterleitenZiel }),
+          credentials: "include",
         }
       );
       if (!res.ok) throw new Error("Weiterleiten fehlgeschlagen");
       alert("Aufgabe erfolgreich weitergeleitet");
       setWeiterleitenIndex(null);
       setWeiterleitenZiel("");
-      setSuspendReload(false);
-      scheduleFetch();
+      setTimeout(() => {
+        fetchSeq.current++;
+      }, 0);
     } catch (error) {
       alert(error.message);
     }
   };
 
-  // --------- Notiz ---------
   const handleAddNotiz = async (index) => {
     const item = data[index];
     const idOrIndex = item?.id ?? index;
@@ -425,6 +597,7 @@ export default function Dashboard({ user, onLogout }) {
             text: notizText,
             zeit: new Date().toLocaleString("de-DE"),
           }),
+          credentials: "include",
         }
       );
       if (!res.ok) throw new Error("Notiz speichern fehlgeschlagen");
@@ -432,129 +605,18 @@ export default function Dashboard({ user, onLogout }) {
       setData((prev) => prev.map((x, i) => (i === index ? updated : x)));
       setNotizText("");
       setActiveNotizIndex(null);
-      setSuspendReload(false);
     } catch (error) {
       alert(error.message);
     }
   };
 
-  // --------- Clientseitige Kategorie-Filterung ---------
-  const filteredData = data.filter(
-    (item) => activeFilter.kategorie === "alle" || item.kategorie === activeFilter.kategorie
-  );
-
   const disableStatusSelect =
     activeDepartment === "Leitstand" && activeTab === "meldungen";
 
-  // --------- Wiederkehrend: Upload + Speichern/Löschen/Edithilfe ---------
-  const uploadAnleitung = async () => {
-    if (!recUploadFile) return null;
-    const fd = new FormData();
-    fd.append("anleitung", recUploadFile);
-    const r = await fetch(`${API}/api/${activeDepartment}/recurring/upload`, {
-      method: "POST",
-      body: fd,
-    });
-    if (!r.ok) throw new Error("Upload fehlgeschlagen");
-    const { url } = await r.json();
-    return url;
-  };
-
-  const saveRecurring = async (e) => {
-    e.preventDefault();
-
-    if (recForm.intervall === "once" && !recForm.dueDate) {
-      alert("Bitte Datum wählen (bei einmaligen Aufgaben).");
-      return;
-    }
-
-    let anleitungUrl = recForm.anleitungUrl;
-
-    try {
-      if (recUploadFile) {
-        const url = await uploadAnleitung();
-        if (url) anleitungUrl = url;
-      }
-
-      const body = {
-        ...recForm,
-        anleitungUrl,
-        createdBy: user.username,
-      };
-
-      let r;
-      if (recForm.id) {
-        // Update
-        r = await fetch(`${API}/api/${activeDepartment}/recurring/${recForm.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-      } else {
-        // Create
-        r = await fetch(`${API}/api/${activeDepartment}/recurring`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-      }
-      if (!r.ok) throw new Error("Recurring speichern fehlgeschlagen");
-
-      setRecForm({
-        id: null,
-        titel: "",
-        beschreibung: "",
-        zeit: "07:00",
-        intervall: "daily",
-        dueDate: "",
-        anleitungUrl: "",
-        vorlaufMin: 120,
-        cooldownHours: 8,
-      });
-      setRecUploadFile(null);
-      fetchRecurring();
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
-  const deleteRecurring = async (id) => {
-    if (!confirm("Recurring-Task löschen?")) return;
-    try {
-      const r = await fetch(`${API}/api/${activeDepartment}/recurring/${id}`, {
-        method: "DELETE",
-      });
-      if (!r.ok) throw new Error("Löschen fehlgeschlagen");
-      fetchRecurring();
-    } catch (err) {
-      alert(err.message);
-    }
-  };
-
-  const editRecurring = (t) => {
-    setRecForm({
-      id: t.id,
-      titel: t.titel || "",
-      beschreibung: t.beschreibung || "",
-      zeit: t.zeit || "07:00",
-      intervall: t.intervall || "daily",
-      dueDate: t.dueDate || "",
-      anleitungUrl: t.anleitungUrl || "",
-      vorlaufMin: t.vorlaufMin ?? 0,
-      cooldownHours: t.cooldownHours ?? 0,
-    });
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  // ----------------- UI -----------------
+  /* ----------------- UI ----------------- */
   return (
-  <div className={`flex flex-col min-h-screen ${document.body.classList.contains('light') ? 'bg-gray-200 text-gray-900' : 'bg-gray-900 text-white'}`}> 
-      {errorMsg && (
-        <div className="bg-red-700 text-white p-3 text-center font-bold">
-          {errorMsg}
-        </div>
-      )}
-  <header className={`p-4 flex justify-between items-center shadow-md ${document.body.classList.contains('light') ? 'bg-white border-b border-gray-300' : 'bg-gray-800'}`}> 
+    <div className="flex flex-col min-h-screen bg-gray-900 text-white">
+      <header className="bg-gray-800 p-4 flex justify-between items-center shadow-md">
         <h1 className="text-xl font-bold text-blue-400">CheckBell</h1>
         <div className="text-sm text-gray-300">
           <span className="font-semibold">{user.username}</span>
@@ -562,9 +624,9 @@ export default function Dashboard({ user, onLogout }) {
       </header>
 
       <div className="flex flex-1">
-        <aside className={`w-52 p-4 ${document.body.classList.contains('light') ? 'bg-white border-r border-gray-300' : 'bg-gray-800'}`}> 
+        <aside className="w-52 bg-gray-800 p-4">
           <h2 className="font-bold text-xl mb-6">Abteilungen</h2>
-          {departments.map((dep) => (
+          {DEPARTMENTS.map((dep) => (
             <button
               key={dep}
               onClick={() => setActiveDepartment(dep)}
@@ -580,11 +642,11 @@ export default function Dashboard({ user, onLogout }) {
           </button>
         </aside>
 
-  <main className="flex-1 p-6">
-          {/* Tabs */}
+        <main className="flex-1 p-6">
+          {/* Tabs + Filter */}
           <div className="flex justify-between items-center mb-4">
             <div className="space-x-2">
-              {tabs.map((tab) => (
+              {TABS.map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -601,38 +663,33 @@ export default function Dashboard({ user, onLogout }) {
               ))}
             </div>
 
-            {/* Filter (nicht für Wiederkehrend) */}
             {activeTab !== "wiederkehrend" && (
-              <div className="flex flex-wrap justify-end items-center gap-2">
-                <button
-                  onClick={() => {
-                    setFormVisible(true);
-                    setSuspendReload(true);
-                    setFormData({
-                      kategorie: "",
-                      titel: "",
-                      beschreibung: "",
-                      priorität: "",
-                      zielAbteilung: "",
-                    });
-                    setEditingIndex(null);
-                  setFiles([]);
-                  }}
-                  className="bg-green-600 px-2 py-1 rounded text-sm"
-                  style={{ minWidth: 32 }}
-                  title="Neuen Eintrag hinzufügen"
-                >
-                  ➕
-                </button>
+              <div className="space-x-2 flex flex-wrap items-center justify-end">
+                {prefsError && (
+                  <span className="text-red-400 text-xs">
+                    Prefs: {String(prefsError)}
+                  </span>
+                )}
+                {prefsLoading && (
+                  <span className="text-xs text-gray-400">
+                    Lade gespeicherte Filter…
+                  </span>
+                )}
+                {justSaved && (
+                  <span className="text-xs text-green-400">Gespeichert!</span>
+                )}
 
                 <select
-                  onChange={(e) => updateFilter("kategorie", e.target.value)}
+                  onChange={(e) =>
+                    setSavedFilters((f) => ({ ...f, kategorie: e.target.value }))
+                  }
                   className="bg-gray-700 px-3 py-1 rounded"
-                  value={activeFilter.kategorie}
+                  value={savedFilters.kategorie}
+                  disabled={prefsLoading}
                   title="Kategorie"
                 >
                   <option value="alle">Alle Kategorien</option>
-                  {kategorien.map((kat) => (
+                  {KATS.map((kat) => (
                     <option key={kat} value={kat}>
                       {kat}
                     </option>
@@ -640,19 +697,15 @@ export default function Dashboard({ user, onLogout }) {
                 </select>
 
                 <select
-                  onChange={(e) => updateFilter("status", e.target.value)}
-                  className={`bg-gray-700 px-3 py-1 rounded ${
-                    activeDepartment === "Leitstand" && activeTab === "meldungen"
-                      ? "opacity-50 cursor-not-allowed"
-                      : ""
-                  }`}
-                  value={
-                    activeDepartment === "Leitstand" && activeTab === "meldungen"
-                      ? "alle"
-                      : activeFilter.status
+                  onChange={(e) =>
+                    setSavedFilters((f) => ({ ...f, status: e.target.value }))
                   }
+                  className={`bg-gray-700 px-3 py-1 rounded ${
+                    disableStatusSelect ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  value={disableStatusSelect ? "alle" : savedFilters.status}
+                  disabled={prefsLoading || disableStatusSelect}
                   title="Status"
-                  disabled={activeDepartment === "Leitstand" && activeTab === "meldungen"}
                 >
                   <option value="alle">Alle</option>
                   <option value="offen">Offen</option>
@@ -660,9 +713,12 @@ export default function Dashboard({ user, onLogout }) {
                 </select>
 
                 <select
-                  value={activeFilter.date}
-                  onChange={(e) => updateFilter("date", e.target.value)}
+                  value={savedFilters.date}
+                  onChange={(e) =>
+                    setSavedFilters((f) => ({ ...f, date: e.target.value }))
+                  }
                   className="bg-gray-700 px-3 py-1 rounded"
+                  disabled={prefsLoading}
                   title="Zeitraum"
                 >
                   <option value="all">Alle Tage</option>
@@ -672,9 +728,15 @@ export default function Dashboard({ user, onLogout }) {
                 </select>
 
                 <select
-                  value={activeFilter.sort}
-                  onChange={(e) => updateFilter("sort", e.target.value)}
+                  value={savedFilters.sort}
+                  onChange={(e) =>
+                    setSavedFilters((f) => ({
+                      ...f,
+                      sort: e.target.value === "asc" ? "asc" : "desc",
+                    }))
+                  }
                   className="bg-gray-700 px-3 py-1 rounded"
+                  disabled={prefsLoading}
                   title="Sortierung"
                 >
                   <option value="desc">Neu → Alt</option>
@@ -682,23 +744,50 @@ export default function Dashboard({ user, onLogout }) {
                 </select>
 
                 <button
+                  onClick={() => {
+                    setFormVisible(true);
+                    setFormData({
+                      kategorie: "",
+                      titel: "",
+                      beschreibung: "",
+                      priorität: "",
+                      zielAbteilung: "",
+                    });
+                    setEditingIndex(null);
+                    setFile(null);
+                  }}
+                  className="bg-green-600 px-4 py-2 rounded"
+                >
+                  ➕ Hinzufügen
+                </button>
+
+                <button
+                  onClick={handleSaveView}
+                  className="bg-blue-700 px-3 py-1 rounded"
+                  disabled={prefsLoading}
+                  title="Aktuelle Ansicht (Filter) dauerhaft speichern"
+                >
+                  Ansicht speichern
+                </button>
+
+                <button
                   onClick={resetFilters}
                   className="bg-gray-600 px-3 py-1 rounded"
+                  disabled={prefsLoading}
                   title="Filter zurücksetzen"
                 >
                   Reset
                 </button>
+
                 <button
-                  onClick={saveFilters}
-                  className="bg-blue-600 px-2 py-1 rounded text-xs"
-                  style={{ minWidth: 24 }}
-                  title="Ansicht speichern"
+                  onClick={() => {
+                    fetchSeq.current++;
+                  }}
+                  className="bg-gray-700 px-3 py-1 rounded"
+                  title="Liste manuell aktualisieren"
                 >
-                  💾
+                  Aktualisieren
                 </button>
-                {saveMsg && (
-                  <span className="text-green-400 text-xs">{saveMsg}</span>
-                )}
               </div>
             )}
           </div>
@@ -718,7 +807,7 @@ export default function Dashboard({ user, onLogout }) {
                 }
               >
                 <option value="">Kategorie wählen</option>
-                {kategorien.map((kat) => (
+                {KATS.map((kat) => (
                   <option key={kat} value={kat}>
                     {kat}
                   </option>
@@ -765,13 +854,13 @@ export default function Dashboard({ user, onLogout }) {
                   }
                 >
                   <option value="">Keine Weiterleitung</option>
-                  {departments
-                    .filter((dep) => dep !== activeDepartment)
-                    .map((dep) => (
+                  {DEPARTMENTS.filter((dep) => dep !== activeDepartment).map(
+                    (dep) => (
                       <option key={dep} value={dep}>
                         {dep}
                       </option>
-                    ))}
+                    )
+                  )}
                 </select>
               )}
 
@@ -781,39 +870,22 @@ export default function Dashboard({ user, onLogout }) {
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 className={`w-full p-6 bg-gray-700 border-2 border-dashed rounded text-center text-gray-400 cursor-pointer ${
-                  files.length > 0 ? "border-green-500" : "border-gray-600"
+                  file ? "border-green-500" : "border-gray-600"
                 }`}
               >
-                <input
-                  type="file"
-                  multiple
-                  className="hidden"
-                  id="fileInput"
-                  onChange={e => {
-                    if (e.target.files?.length) {
-                      setFiles((prev) => [...prev, ...Array.from(e.target.files)]);
-                    }
-                  }}
-                />
-                {files.length > 0 ? (
-                  <div className="space-y-1">
-                    {files.map((f, idx) => (
-                      <div key={idx} className="flex items-center justify-between text-sm">
-                        <span>📎 <strong>{f.name}</strong></span>
-                        <button
-                          type="button"
-                          className="ml-2 text-red-500 underline"
-                          onClick={() => setFiles(files.filter((_, i) => i !== idx))}
-                        >
-                          Entfernen
-                        </button>
-                      </div>
-                    ))}
+                {file ? (
+                  <div>
+                    📎 Datei ausgewählt: <strong>{file.name}</strong>{" "}
+                    <button
+                      type="button"
+                      className="ml-2 text-red-500 underline"
+                      onClick={() => setFile(null)}
+                    >
+                      Entfernen
+                    </button>
                   </div>
                 ) : (
-                  <>
-                    <label htmlFor="fileInput" className="cursor-pointer">Dateien auswählen oder hierher ziehen (Drag & Drop)</label>
-                  </>
+                  <>Datei hierher ziehen (Drag & Drop)</>
                 )}
               </div>
 
@@ -823,10 +895,7 @@ export default function Dashboard({ user, onLogout }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    setFormVisible(false);
-                    setSuspendReload(false);
-                  }}
+                  onClick={() => setFormVisible(false)}
                   className="bg-gray-600 px-4 py-2 rounded"
                 >
                   Schließen
@@ -838,23 +907,23 @@ export default function Dashboard({ user, onLogout }) {
           {/* Liste (Tasks/Meldungen) */}
           {activeTab !== "wiederkehrend" && (
             <div className="space-y-3">
+              {listError && (
+                <div className="text-red-400 text-sm">{listError}</div>
+              )}
+              {listLoading && (
+                <div className="text-sm text-gray-400">Lade …</div>
+              )}
+              {!listLoading && data.length === 0 && (
+                <div className="text-sm text-gray-400">Keine Einträge.</div>
+              )}
 
-              {filteredData.map((item, index) => {
-                // Anhänge: Kompatibel mit altem Feld (anhangDateiUrl) und neuem Feld (anhangDateien/anhaenge)
-                const anhaenge = [];
-                if (Array.isArray(item.anhaenge) && item.anhaenge.length > 0) {
-                  // Backend liefert [{url, name}]
-                  anhaenge.push(...item.anhaenge.map(f => ({ url: f.url, name: f.name })));
-                } else if (Array.isArray(item.anhangDateien) && item.anhangDateien.length > 0) {
-                  // Backend liefert [string]
-                  anhaenge.push(...item.anhangDateien.map(f => ({ url: f, name: f.split('/').pop() })));
-                } else if (item.anhangDateiUrl) {
-                  anhaenge.push({ url: item.anhangDateiUrl, name: item.anhangDateiUrl.split('/').pop() });
-                }
+              {data.map((item, index) => {
+                const fileUrl = absUploadUrl(item.anhangDateiUrl);
+                const canPreview = isImageExt(item.anhangDateiUrl);
                 return (
                   <div
-                    key={item.id ?? item.instanceId ?? index}
-                    className={`p-3 rounded flex justify-between items-center cursor-pointer shadow-sm transition-colors ${document.body.classList.contains('light') ? 'bg-white border border-gray-200 hover:bg-gray-50' : 'bg-gray-800'}`}
+                    key={item.id ?? index}
+                    className="bg-gray-800 p-3 rounded flex justify-between items-center cursor-pointer"
                     onDoubleClick={() =>
                       setData((old) =>
                         old.map((d, i) =>
@@ -866,44 +935,47 @@ export default function Dashboard({ user, onLogout }) {
                     <div className="flex-1 pr-4">
                       <div className="font-bold flex items-center gap-2">
                         {item.titel}
-                        {anhaenge.length > 0 && anhaenge.map((anh, aidx) => {
-                          const fileUrl = absUploadUrl(anh.url);
-                          const canPreview = isImageExt(anh.url);
-                          return (
-                            <span key={aidx} className="flex items-center gap-1">
-                              <button
-                                className="text-blue-400 underline"
-                                title={canPreview ? "Anhang anzeigen" : "Datei öffnen"}
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (canPreview) {
-                                    setPreview({
-                                      url: fileUrl,
-                                      isImage: true,
-                                      name: anh.name,
-                                    });
-                                  } else {
-                                    window.open(fileUrl, "_blank");
-                                  }
-                                }}
-                              >
-                                📎
-                              </button>
-                              <a
-                                className="text-blue-400 underline"
-                                href={fileUrl}
-                                download
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                title="Herunterladen"
-                              >
-                                ⬇️
-                              </a>
-                            </span>
-                          );
-                        })}
-                        {/* Anleitung (URL) */}
+
+                        {item.anhangDateiUrl && (
+                          <>
+                            <button
+                              className="text-blue-400 underline"
+                              title={
+                                canPreview ? "Anhang anzeigen" : "Datei öffnen"
+                              }
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (canPreview) {
+                                  setPreview({
+                                    url: fileUrl,
+                                    isImage: true,
+                                    name:
+                                      (item.titel || "Anhang") +
+                                      " – " +
+                                      (item.anhangDateiUrl.split("/").pop() ||
+                                        ""),
+                                  });
+                                } else {
+                                  window.open(fileUrl, "_blank");
+                                }
+                              }}
+                            >
+                              📎
+                            </button>
+                            <a
+                              className="text-blue-400 underline"
+                              href={fileUrl}
+                              download
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              title="Herunterladen"
+                            >
+                              ⬇️
+                            </a>
+                          </>
+                        )}
+
                         {item.anleitungUrl && (
                           <a
                             href={absUploadUrl(item.anleitungUrl)}
@@ -916,6 +988,7 @@ export default function Dashboard({ user, onLogout }) {
                             📘
                           </a>
                         )}
+
                         {item.fromRecurring && (
                           <span className="text-xs bg-blue-700 rounded px-2 py-0.5">
                             wiederkehrend
@@ -927,6 +1000,7 @@ export default function Dashboard({ user, onLogout }) {
                           </span>
                         )}
                       </div>
+
                       {item.expanded ? (
                         <>
                           <div className="text-sm text-gray-300 mt-1">
@@ -944,23 +1018,78 @@ export default function Dashboard({ user, onLogout }) {
                                 <> | Ziel: {item.zielAbteilung}</>
                               )}
                           </div>
+
                           <div className="mt-2">
                             <StatusBadge item={item} />
                           </div>
+
+                          {Array.isArray(item.anhaenge) &&
+                            item.anhaenge.length > 0 && (
+                              <div className="mt-2 text-xs">
+                                <div className="font-semibold mb-1">
+                                  📎 Anhänge
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {item.anhaenge.map((f, idx) => {
+                                    const url = absUploadUrl(f.url);
+                                    const isImg = isImageExt(f.url);
+                                    return (
+                                      <div
+                                        key={idx}
+                                        className="bg-gray-700 rounded px-2 py-1 flex items-center gap-2"
+                                      >
+                                        <button
+                                          className="underline"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (isImg)
+                                              setPreview({
+                                                url,
+                                                isImage: true,
+                                                name:
+                                                  f.name || `Anhang ${idx + 1}`,
+                                              });
+                                            else window.open(url, "_blank");
+                                          }}
+                                        >
+                                          {f.name || `Datei ${idx + 1}`}
+                                        </button>
+                                        <a
+                                          href={url}
+                                          download
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          onClick={(e) => e.stopPropagation()}
+                                          title="Download"
+                                        >
+                                          ⬇️
+                                        </a>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            )}
+
                           {item.notizen?.length > 0 && (
                             <div className="mt-3 text-xs text-gray-200">
-                              <div className="font-semibold mb-1">📝 Notizen</div>
+                              <div className="font-semibold mb-1">
+                                📝 Notizen
+                              </div>
                               {item.notizen.map((n, i) => (
                                 <div
                                   key={i}
                                   className="mb-1 border-l-2 border-gray-600 pl-2"
                                 >
-                                  <span className="font-semibold">{n.autor}</span>{" "}
+                                  <span className="font-semibold">
+                                    {n.autor}
+                                  </span>{" "}
                                   ({n.zeit}): {n.text}
                                 </div>
                               ))}
                             </div>
                           )}
+
                           {activeNotizIndex === index ? (
                             <div className="mt-2 flex gap-2">
                               <input
@@ -980,7 +1109,6 @@ export default function Dashboard({ user, onLogout }) {
                                 onClick={() => {
                                   setActiveNotizIndex(null);
                                   setNotizText("");
-                                  setSuspendReload(false);
                                 }}
                                 className="bg-gray-600 px-2 py-1 rounded text-sm"
                               >
@@ -992,7 +1120,6 @@ export default function Dashboard({ user, onLogout }) {
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setActiveNotizIndex(index);
-                                setSuspendReload(true);
                               }}
                               className="mt-2 text-xs text-blue-400 underline"
                             >
@@ -1002,10 +1129,9 @@ export default function Dashboard({ user, onLogout }) {
                         </>
                       ) : (
                         <>
-                          <div className="text-sm text-gray-400" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'pre-line' }}>
-                            {item.beschreibung}
+                          <div className="text-sm text-gray-400">
+                            {item.beschreibung?.slice(0, 60)}…
                           </div>
-                          {/* ✅ kompaktes Badge in Listenansicht */}
                           <div className="mt-1">
                             <StatusBadge item={item} compact />
                           </div>
@@ -1014,13 +1140,6 @@ export default function Dashboard({ user, onLogout }) {
                     </div>
 
                     <div className="flex gap-2 items-center">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); exportSinglePDF(item); }}
-                        className="px-2 py-1 rounded text-xs bg-blue-600 text-white"
-                        title="Diese Meldung als PDF exportieren"
-                      >
-                        PDF
-                      </button>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -1059,13 +1178,13 @@ export default function Dashboard({ user, onLogout }) {
                             className="bg-gray-700 text-xs p-1 rounded"
                           >
                             <option value="">Abteilung wählen</option>
-                            {departments
-                              .filter((dep) => dep !== activeDepartment)
-                              .map((dep) => (
-                                <option key={dep} value={dep}>
-                                  {dep}
-                                </option>
-                              ))}
+                            {DEPARTMENTS.filter(
+                              (dep) => dep !== activeDepartment
+                            ).map((dep) => (
+                              <option key={dep} value={dep}>
+                                {dep}
+                              </option>
+                            ))}
                           </select>
                           <button
                             onClick={(e) => {
@@ -1080,7 +1199,6 @@ export default function Dashboard({ user, onLogout }) {
                             onClick={(e) => {
                               e.stopPropagation();
                               setWeiterleitenIndex(null);
-                              setSuspendReload(false);
                             }}
                             className="bg-gray-600 text-xs px-2 py-1 rounded"
                           >
@@ -1092,7 +1210,6 @@ export default function Dashboard({ user, onLogout }) {
                           onClick={(e) => {
                             e.stopPropagation();
                             setWeiterleitenIndex(index);
-                            setSuspendReload(true);
                           }}
                           className="px-2 py-1 rounded text-xs bg-blue-600"
                         >
@@ -1110,15 +1227,93 @@ export default function Dashboard({ user, onLogout }) {
           {activeTab === "wiederkehrend" && (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Formular */}
-              <form onSubmit={saveRecurring} className="bg-gray-800 p-4 rounded space-y-3">
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+
+                  if (recForm.intervall === "once" && !recForm.dueDate) {
+                    alert("Bitte Datum wählen (bei einmaligen Aufgaben).");
+                    return;
+                  }
+
+                  let anleitungUrl = recForm.anleitungUrl;
+                  try {
+                    if (recUploadFile) {
+                      const fd = new FormData();
+                      fd.append("anleitung", recUploadFile);
+                      const r = await fetch(
+                        `${API}/api/${activeDepartment}/recurring/upload`,
+                        { method: "POST", body: fd, credentials: "include" }
+                      );
+                      if (!r.ok) throw new Error("Upload fehlgeschlagen");
+                      const { url } = await r.json();
+                      if (url) anleitungUrl = url;
+                    }
+
+                    const body = {
+                      ...recForm,
+                      anleitungUrl,
+                      createdBy: user.username,
+                    };
+
+                    let r;
+                    if (recForm.id) {
+                      r = await fetch(
+                        `${API}/api/${activeDepartment}/recurring/${recForm.id}`,
+                        {
+                          method: "PUT",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify(body),
+                          credentials: "include",
+                        }
+                      );
+                    } else {
+                      r = await fetch(
+                        `${API}/api/${activeDepartment}/recurring`,
+                        {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify(body),
+                          credentials: "include",
+                        }
+                      );
+                    }
+                    if (!r.ok) throw new Error("Recurring speichern fehlgeschlagen");
+
+                    setRecForm({
+                      id: null,
+                      titel: "",
+                      beschreibung: "",
+                      zeit: "07:00",
+                      intervall: "daily",
+                      dueDate: "",
+                      anleitungUrl: "",
+                      vorlaufMin: 120,
+                      cooldownHours: 8,
+                    });
+                    setRecUploadFile(null);
+                    setTimeout(() => {
+                      fetchSeq.current++;
+                    }, 0);
+                  } catch (err) {
+                    alert(err.message);
+                  }
+                }}
+                className="bg-gray-800 p-4 rounded space-y-3"
+              >
                 <h3 className="font-bold text-lg mb-2">
-                  {recForm.id ? "Vorlage bearbeiten" : "Neues wiederkehrendes Task"} ({activeDepartment})
+                  {recForm.id
+                    ? "Vorlage bearbeiten"
+                    : "Neues wiederkehrendes Task"}{" "}
+                  ({activeDepartment})
                 </h3>
                 <input
                   className="w-full p-2 bg-gray-700 rounded"
                   placeholder="Titel"
                   value={recForm.titel}
-                  onChange={(e) => setRecForm({ ...recForm, titel: e.target.value })}
+                  onChange={(e) =>
+                    setRecForm({ ...recForm, titel: e.target.value })
+                  }
                   required
                 />
                 <textarea
@@ -1136,7 +1331,9 @@ export default function Dashboard({ user, onLogout }) {
                       className="w-full p-2 bg-gray-700 rounded"
                       type="time"
                       value={recForm.zeit}
-                      onChange={(e) => setRecForm({ ...recForm, zeit: e.target.value })}
+                      onChange={(e) =>
+                        setRecForm({ ...recForm, zeit: e.target.value })
+                      }
                       required
                     />
                   </div>
@@ -1155,7 +1352,9 @@ export default function Dashboard({ user, onLogout }) {
                   </div>
                   {recForm.intervall === "once" && (
                     <div className="flex-1">
-                      <label className="text-xs text-gray-400">Datum (einmalig)</label>
+                      <label className="text-xs text-gray-400">
+                        Datum (einmalig)
+                      </label>
                       <input
                         className="w-full p-2 bg-gray-700 rounded"
                         type="date"
@@ -1170,7 +1369,9 @@ export default function Dashboard({ user, onLogout }) {
 
                 <div className="flex gap-2">
                   <div className="flex-1">
-                    <label className="text-xs text-gray-400">Vorlauf (Minuten)</label>
+                    <label className="text-xs text-gray-400">
+                      Vorlauf (Minuten)
+                    </label>
                     <input
                       className="w-full p-2 bg-gray-700 rounded"
                       type="number"
@@ -1182,21 +1383,28 @@ export default function Dashboard({ user, onLogout }) {
                     />
                   </div>
                   <div className="flex-1">
-                    <label className="text-xs text-gray-400">Cooldown (Stunden)</label>
+                    <label className="text-xs text-gray-400">
+                      Cooldown (Stunden)
+                    </label>
                     <input
                       className="w-full p-2 bg-gray-700 rounded"
                       type="number"
                       min="0"
                       value={recForm.cooldownHours}
                       onChange={(e) =>
-                        setRecForm({ ...recForm, cooldownHours: e.target.value })
+                        setRecForm({
+                          ...recForm,
+                          cooldownHours: e.target.value,
+                        })
                       }
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="text-xs text-gray-400">Anleitung (URL oder Datei)</label>
+                  <label className="text-xs text-gray-400">
+                    Anleitung (URL oder Datei)
+                  </label>
                   <input
                     className="w-full p-2 bg-gray-700 rounded mb-2"
                     placeholder="https://... (optional)"
@@ -1208,7 +1416,9 @@ export default function Dashboard({ user, onLogout }) {
                   <input
                     type="file"
                     className="w-full text-sm"
-                    onChange={(e) => setRecUploadFile(e.target.files?.[0] ?? null)}
+                    onChange={(e) =>
+                      setRecUploadFile(e.target.files?.[0] ?? null)
+                    }
                   />
                 </div>
 
@@ -1242,9 +1452,13 @@ export default function Dashboard({ user, onLogout }) {
 
               {/* Liste Vorlagen */}
               <div className="bg-gray-800 p-4 rounded">
-                <h3 className="font-bold text-lg mb-2">Wiederkehrende Tasks – Vorlagen</h3>
+                <h3 className="font-bold text-lg mb-2">
+                  Wiederkehrende Tasks – Vorlagen
+                </h3>
                 {recList.length === 0 && (
-                  <div className="text-sm text-gray-400">Keine Vorlagen vorhanden.</div>
+                  <div className="text-sm text-gray-400">
+                    Keine Vorlagen vorhanden.
+                  </div>
                 )}
                 <div className="space-y-2">
                   {recList.map((t) => (
@@ -1261,10 +1475,12 @@ export default function Dashboard({ user, onLogout }) {
                           – um {t.zeit}
                           {t.anleitungUrl && (
                             <>
-                              {" "} |{" "}
+                              {" "}
+                              |{" "}
                               <a
                                 href={absUploadUrl(t.anleitungUrl)}
                                 target="_blank"
+                                rel="noreferrer"
                                 className="text-blue-400 underline"
                               >
                                 Anleitung
@@ -1273,22 +1489,52 @@ export default function Dashboard({ user, onLogout }) {
                           )}
                         </div>
                         <div className="text-[11px] text-gray-400 mt-1">
-                          angelegt von {t.createdBy || "unbekannt"} · {fmtDateTime(t.createdAt)}
-                          {" "}| Vorlauf: {t.vorlaufMin ?? 0} min · Cooldown: {t.cooldownHours ?? 0} h
+                          angelegt von {t.createdBy || "unbekannt"} ·{" "}
+                          {fmtDateTime(t.createdAt)} | Vorlauf:{" "}
+                          {t.vorlaufMin ?? 0} min · Cooldown:{" "}
+                          {t.cooldownHours ?? 0} h
                         </div>
                         {t.beschreibung && (
-                          <div className="text-xs text-gray-400 mt-1">{t.beschreibung}</div>
+                          <div className="text-xs text-gray-400 mt-1">
+                            {t.beschreibung}
+                          </div>
                         )}
                       </div>
                       <div className="flex gap-2">
                         <button
-                          onClick={() => editRecurring(t)}
+                          onClick={() =>
+                            setRecForm({
+                              id: t.id,
+                              titel: t.titel || "",
+                              beschreibung: t.beschreibung || "",
+                              zeit: t.zeit || "07:00",
+                              intervall: t.intervall || "daily",
+                              dueDate: t.dueDate || "",
+                              anleitungUrl: t.anleitungUrl || "",
+                              vorlaufMin: t.vorlaufMin ?? 0,
+                              cooldownHours: t.cooldownHours ?? 0,
+                            })
+                          }
                           className="bg-yellow-600 text-xs px-2 py-1 rounded"
                         >
                           Bearbeiten
                         </button>
                         <button
-                          onClick={() => deleteRecurring(t.id)}
+                          onClick={async () => {
+                            if (!confirm("Recurring-Task löschen?")) return;
+                            try {
+                              const r = await fetch(
+                                `${API}/api/${activeDepartment}/recurring/${t.id}`,
+                                { method: "DELETE", credentials: "include" }
+                              );
+                              if (!r.ok) throw new Error("Löschen fehlgeschlagen");
+                              setTimeout(() => {
+                                fetchSeq.current++;
+                              }, 0);
+                            } catch (err) {
+                              alert(err.message);
+                            }
+                          }}
                           className="bg-red-600 text-xs px-2 py-1 rounded"
                         >
                           Löschen
@@ -1318,7 +1564,9 @@ export default function Dashboard({ user, onLogout }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-2">
-              <div className="text-sm text-gray-300">{preview.name || "Anhang"}</div>
+              <div className="text-sm text-gray-300">
+                {preview.name || "Anhang"}
+              </div>
               <button
                 className="px-2 py-1 bg-gray-700 rounded"
                 onClick={() => setPreview(null)}

@@ -181,5 +181,30 @@
     "anhaenge": [],
     "erledigtVon": "admin",
     "originalId": "mek3863ilqmmja"
+  },
+  {
+    "kategorie": "Technik",
+    "titel": "Riemenriss OG 2",
+    "beschreibung": "Bei Loop 2 Riemenriss bei förderer F22 -> Aufwirkung auf Auslieferung ",
+    "priorität": "hoch",
+    "zielAbteilung": null,
+    "erstelltVon": "admin",
+    "erstelltAm": "22.8.2025, 11:26:06",
+    "status": "offen",
+    "id": "memmlcjkk60960",
+    "createdAt": "2025-08-22T09:26:06.293Z",
+    "quelleAbteilung": "Leitstand",
+    "completed": false,
+    "completedAt": null,
+    "notizen": [
+      {
+        "autor": "admin",
+        "text": "riemen wurde ersetzt",
+        "zeit": "20.8.2025, 16:50:14"
+      }
+    ],
+    "anhaenge": [],
+    "erledigtVon": "admin",
+    "originalId": "mek3863ilqmmja"
   }
 ]

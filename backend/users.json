@@ -35,6 +35,24 @@
         "kategorie": "alle",
         "date": "all",
         "sort": "desc"
+      },
+      "tasks:Logistik": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "tasks:TestDeptXYZ_FromAgent": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "meldungen:test": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
       }
     }
   },
@@ -81,7 +99,7 @@
   {
     "username": "123",
     "password": "$2b$10$ta8KUUZxjAS8ghqrSPQuPeA1xP3bsO1R5SRiHNy9rXLWi1/6d8H0K",
-    "isAdmin": true,
+    "isAdmin": false,
     "mustChangePassword": true,
     "createdAt": "2025-08-22T11:14:32.638Z",
     "preferences": {
@@ -98,12 +116,24 @@
         "sort": "desc"
       },
       "tasks:Technik": {
-        "status": "alle",
+        "status": "offen",
         "kategorie": "alle",
         "date": "all",
         "sort": "desc"
       },
       "meldungen:Technik": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "tasks:Logistik": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "meldungen:Qualität": {
         "status": "alle",
         "kategorie": "alle",
         "date": "all",

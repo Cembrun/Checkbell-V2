@@ -1,5 +1,6 @@
 // src/pages/Dashboard.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
+import { exportSinglePDFWithImages } from "../utils/pdfExport";
 
 /* =========================
    Inline: StatusBadge
@@ -198,7 +199,9 @@ function useServerSavedFilters(username, opts = {}) {
 /* =========================
    Dashboard (selbst-enthaltend)
    ========================= */
-const DEPARTMENTS = ["Leitstand", "Technik", "Qualität", "Logistik"];
+// DEPARTMENTS loaded from server at runtime
+// will be fetched on mount and stored in state
+const DEFAULT_DEPARTMENTS = ["Leitstand", "Technik", "Qualität", "Logistik"];
 const TABS = ["tasks", "meldungen", "wiederkehrend"];
 const KATS = ["Betrieb", "Technik", "IT"];
 const API = "http://localhost:4000";
@@ -234,7 +237,9 @@ const fmtDateTime = (iso) => {
 const SHORT_DESC_LEN = 140;
 
 export default function Dashboard({ user, onLogout }) {
-  const [activeDepartment, setActiveDepartment] = useState(DEPARTMENTS[0]);
+  const [serverDepartments, setServerDepartments] = useState(DEFAULT_DEPARTMENTS);
+  const [activeDepartment, setActiveDepartment] = useState(serverDepartments[0]);
+  const [newDepartmentName, setNewDepartmentName] = useState("");
   const [activeTab, setActiveTab] = useState("tasks");
 
   const [data, setData] = useState([]);
@@ -337,8 +342,24 @@ export default function Dashboard({ user, onLogout }) {
 
   // Sequenz zum Abbrechen/Überschreiben
   const fetchSeq = useRef(0);
+  // reloadCounter: use state to trigger re-fetches from UI actions
+  const [reloadCounter, setReloadCounter] = useState(0);
 
   useEffect(() => {
+    // load departments from server
+    (async () => {
+      try {
+        const r = await fetch(`${API}/api/departments`, { credentials: 'include' });
+        if (r.ok) {
+          const deps = await r.json();
+          if (Array.isArray(deps) && deps.length) {
+            setServerDepartments(deps);
+            setActiveDepartment((prev) => deps.includes(prev) ? prev : deps[0]);
+          }
+        }
+      } catch {}
+    })();
+
     if (prefsLoading) return; // erst laden, wenn Prefs da sind
 
     let cancelled = false;
@@ -409,7 +430,7 @@ export default function Dashboard({ user, onLogout }) {
     return () => {
       cancelled = true;
     };
-  }, [fetchKey, prefsLoading, activeDepartment, activeTab]);
+  }, [fetchKey, prefsLoading, activeDepartment, activeTab, reloadCounter]);
 
   // Drag&Drop
   const handleDragOver = (e) => {
@@ -442,10 +463,13 @@ export default function Dashboard({ user, onLogout }) {
   // CRUD (create/complete/delete/forward/note)
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const zielDep =
+    // normalize targets: support single string or array from formData.zielAbteilung
+    const targets =
       activeTab === "meldungen" && formData.zielAbteilung
-        ? formData.zielAbteilung
-        : activeDepartment;
+        ? Array.isArray(formData.zielAbteilung) && formData.zielAbteilung.length
+          ? formData.zielAbteilung
+          : [formData.zielAbteilung]
+        : [activeDepartment];
 
     const eintrag = {
       ...formData,
@@ -454,23 +478,22 @@ export default function Dashboard({ user, onLogout }) {
       status: "offen",
     };
 
-    const fd = new FormData();
-    fd.append("eintrag", JSON.stringify(eintrag));
-    if (files && files.length > 0) {
-      for (const f of files) {
-        fd.append("anhangDateien", f);
-      }
-    }
-
     try {
-      const res = await fetch(`${API}/api/${zielDep}/${activeTab}`, {
-        method: "POST",
-        body: fd,
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Speichern fehlgeschlagen");
+      for (const zielDep of targets) {
+        const fd = new FormData();
+        fd.append("eintrag", JSON.stringify(eintrag));
+        if (files && files.length > 0) {
+          for (const f of files) fd.append("anhangDateien", f);
+        }
+        const res = await fetch(`${API}/api/${zielDep}/${activeTab}`, {
+          method: "POST",
+          body: fd,
+          credentials: "include",
+        });
+        if (!res.ok) throw new Error(`Speichern fehlgeschlagen für ${zielDep}`);
+      }
     } catch (err) {
-      alert(err.message);
+      alert(err.message || "Speichern fehlgeschlagen");
       return;
     }
 
@@ -487,7 +510,7 @@ export default function Dashboard({ user, onLogout }) {
 
     // manuell reload triggern
     setTimeout(() => {
-      fetchSeq.current++;
+      setReloadCounter((c) => c + 1);
     }, 0);
   };
 
@@ -558,7 +581,7 @@ export default function Dashboard({ user, onLogout }) {
     } catch (error) {
       alert(error.message || "Fehler beim Status-Update");
       setTimeout(() => {
-        fetchSeq.current++;
+  setReloadCounter((c) => c + 1);
       }, 0);
     }
   };
@@ -590,7 +613,7 @@ export default function Dashboard({ user, onLogout }) {
       setWeiterleitenIndex(null);
       setWeiterleitenZiel("");
       setTimeout(() => {
-        fetchSeq.current++;
+        setReloadCounter((c) => c + 1);
       }, 0);
     } catch (error) {
       alert(error.message);
@@ -647,19 +670,87 @@ export default function Dashboard({ user, onLogout }) {
       <div className="flex flex-col md:flex-row flex-1">
         <aside className="w-full md:w-60 bg-gradient-to-b from-gray-800 to-gray-900 p-5 border-r border-gray-700">
           <h2 className="font-semibold text-lg mb-4 text-gray-200">Abteilungen</h2>
-          {DEPARTMENTS.map((dep) => (
-            <button
-              key={dep}
-              onClick={() => setActiveDepartment(dep)}
-              className={`block w-full text-left px-3 py-2 mb-2 rounded-md transition-colors ${
-                activeDepartment === dep
-                  ? "bg-blue-600 text-white shadow"
-                  : "bg-gray-700 text-gray-200 hover:bg-blue-600 hover:text-white"
-              }`}
-            >
-              {dep}
-            </button>
+          {serverDepartments.map((dep) => (
+            <div key={dep} className="group flex items-center gap-2 mb-2">
+              <button
+                onClick={() => setActiveDepartment(dep)}
+                className={`flex-1 text-left px-3 py-2 rounded-md transition-colors ${
+                  activeDepartment === dep
+                    ? "bg-blue-600 text-white shadow"
+                    : "bg-gray-700 text-gray-200 hover:bg-blue-600 hover:text-white"
+                }`}
+              >
+                {dep}
+              </button>
+              {user?.isAdmin && (
+                <button
+                  title="Abteilung entfernen"
+                  onClick={() => {
+                    if (!confirm(`Abteilung '${dep}' entfernen?`)) return;
+                    fetch(`${API}/api/departments/${encodeURIComponent(dep)}`, {
+                      method: 'DELETE',
+                      credentials: 'include'
+                    }).then(async (r) => {
+                      if (!r.ok) return alert('Löschen fehlgeschlagen');
+                      const js = await r.json();
+                      setServerDepartments(js.departments || []);
+                      if (activeDepartment === dep) setActiveDepartment((js.departments||[])[0]||"");
+                    }).catch(() => alert('Löschen fehlgeschlagen'));
+                  }}
+                  className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-white w-7 h-7 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-700"
+                >
+                  <span className="sr-only">Entfernen</span>
+                  ✖
+                </button>
+              )}
+            </div>
           ))}
+
+          {user?.isAdmin && (
+            <div className="mt-4">
+              <div className="text-sm text-gray-300 mb-2">Abteilungen verwalten</div>
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  const name = (newDepartmentName || "").trim();
+                  if (!name) return alert("Name eingeben");
+                  try {
+                    const headers = { "Content-Type": "application/json" };
+                    if (user?.username) headers["x-user"] = user.username; // fallback when session cookie missing
+                    const r = await fetch(`${API}/api/departments`, {
+                      method: "POST",
+                      headers,
+                      body: JSON.stringify({ name }),
+                      credentials: "include",
+                    });
+                    if (!r.ok) {
+                      let msg = "Hinzufügen fehlgeschlagen";
+                      try {
+                        const js = await r.json();
+                        if (js?.message) msg += `: ${js.message}`;
+                      } catch (_) {
+                        try {
+                          const txt = await r.text();
+                          if (txt) msg += `: ${txt}`;
+                        } catch (_) {}
+                      }
+                      return alert(msg);
+                    }
+                    const js = await r.json();
+                    setServerDepartments(js.departments || []);
+                    setNewDepartmentName("");
+                    setActiveDepartment((js.departments || [])[0] || "");
+                  } catch (err) {
+                    alert("Hinzufügen fehlgeschlagen: " + (err?.message || String(err)));
+                  }
+                }}
+                className="flex items-center gap-2"
+              >
+                <input value={newDepartmentName} onChange={(e) => setNewDepartmentName(e.target.value)} className="flex-1 p-2 rounded-l bg-gray-700 text-sm border border-gray-600" placeholder="Neue Abteilung" />
+                <button type="submit" className="px-3 py-2 rounded-r bg-green-600 hover:bg-green-700 text-white">+</button>
+              </form>
+            </div>
+          )}
           <button
             onClick={onLogout}
             className="mt-6 w-full text-left px-3 py-2 rounded-md bg-red-600 text-white hover:opacity-95"
@@ -865,7 +956,7 @@ export default function Dashboard({ user, onLogout }) {
                   }
                 >
                   <option value="">Keine Weiterleitung</option>
-                  {DEPARTMENTS.filter((dep) => dep !== activeDepartment).map(
+                  {serverDepartments.filter((dep) => dep !== activeDepartment).map(
                     (dep) => (
                       <option key={dep} value={dep}>
                         {dep}
@@ -1256,6 +1347,22 @@ export default function Dashboard({ user, onLogout }) {
                         Löschen
                       </button>
 
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          try {
+                            exportSinglePDFWithImages(item);
+                          } catch (err) {
+                            console.error('PDF-Export failed', err);
+                            alert('PDF-Export fehlgeschlagen');
+                          }
+                        }}
+                        className="px-2 py-1 rounded text-xs bg-indigo-600 text-white"
+                        title="Als PDF herunterladen"
+                      >
+                        📄 PDF
+                      </button>
+
                       {weiterleitenIndex === index ? (
                         <div className="flex gap-1 items-center">
                           <select
@@ -1264,7 +1371,7 @@ export default function Dashboard({ user, onLogout }) {
                             className="bg-gray-700 text-xs p-1 rounded"
                           >
                             <option value="">Abteilung wählen</option>
-                            {DEPARTMENTS.filter(
+                            {serverDepartments.filter(
                               (dep) => dep !== activeDepartment
                             ).map((dep) => (
                               <option key={dep} value={dep}>
@@ -1379,7 +1486,7 @@ export default function Dashboard({ user, onLogout }) {
                     });
                     setRecUploadFile(null);
                     setTimeout(() => {
-                      fetchSeq.current++;
+                      setReloadCounter((c) => c + 1);
                     }, 0);
                   } catch (err) {
                     alert(err.message);
@@ -1615,7 +1722,7 @@ export default function Dashboard({ user, onLogout }) {
                               );
                               if (!r.ok) throw new Error("Löschen fehlgeschlagen");
                               setTimeout(() => {
-                                fetchSeq.current++;
+                                setReloadCounter((c) => c + 1);
                               }, 0);
                             } catch (err) {
                               alert(err.message);

@@ -18,12 +18,32 @@ const ARCHIVE_SUFFIX = "_archive.json"; // z.B. Technik_archive.json
 const CLIENT_ORIGINS = [
   process.env.CLIENT_ORIGIN || "http://localhost:5173",
   "http://localhost:5174",
+  // Vite dev server on port 74 (user preference)
+  "http://localhost:74",
   "https://checkbellapp.vercel.app",
   "https://checkbellapp.vercel.app/",
 ];
 
-// Abteilungen für den Scheduler
-const ALL_DEPARTMENTS = ["Leitstand", "Technik", "Qualität", "Logistik"];
+// Abteilungen (persistiert in departments.json)
+const DEPARTMENTS_FILE = path.join('.', 'departments.json');
+function readDepartments() {
+  try {
+    const raw = fs.readFileSync(DEPARTMENTS_FILE, 'utf8');
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) return arr;
+  } catch {}
+  return ["Leitstand", "Technik", "Qualität", "Logistik"];
+}
+function writeDepartments(arr) {
+  try {
+    fs.writeFileSync(DEPARTMENTS_FILE, JSON.stringify(arr, null, 2));
+    return true;
+  } catch (e) {
+    console.warn('Could not write departments file', e?.message || e);
+    return false;
+  }
+}
+let ALL_DEPARTMENTS = readDepartments();
 
 // ----- Ordner anlegen -----
 function ensureDir(p) {
@@ -84,7 +104,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 15 * 1024 * 1024 },
+  limits: { fileSize: 50 * 1024 * 1024, files: 20 },
 });
 
 // ----- JSON-Helper -----
@@ -246,6 +266,36 @@ async function syncToQuelle(originalId, quelleAbteilung, changes) {
 
 // ✅ Ping
 app.get("/", (req, res) => res.send("✅ Backend läuft!"));
+
+// Endpoints to manage departments
+app.get('/api/departments', (req, res) => {
+  res.json(ALL_DEPARTMENTS);
+});
+
+app.post('/api/departments', requireAdmin, (req, res) => {
+  const { name } = req.body || {};
+  if (!name || typeof name !== 'string') return res.status(400).json({ message: 'Name required' });
+  const clean = String(name).trim();
+  if (!clean) return res.status(400).json({ message: 'Invalid name' });
+  if (ALL_DEPARTMENTS.includes(clean)) return res.status(400).json({ message: 'Already exists' });
+  ALL_DEPARTMENTS.push(clean);
+  writeDepartments(ALL_DEPARTMENTS);
+  // ensure empty data files for new department
+  try { fs.writeFileSync(path.join(DATA_DIR, `${clean}_tasks.json`), '[]'); } catch {}
+  try { fs.writeFileSync(path.join(DATA_DIR, `${clean}_meldungen.json`), '[]'); } catch {}
+  try { fs.writeFileSync(path.join(DATA_DIR, `${clean}_recurring.json`), '[]'); } catch {}
+  res.json({ ok: true, departments: ALL_DEPARTMENTS });
+});
+
+app.delete('/api/departments/:name', requireAdmin, (req, res) => {
+  const name = req.params.name;
+  if (!ALL_DEPARTMENTS.includes(name)) return res.status(404).json({ message: 'Not found' });
+  // prevent removing last department
+  if (ALL_DEPARTMENTS.length <= 1) return res.status(400).json({ message: 'Cannot remove last department' });
+  ALL_DEPARTMENTS = ALL_DEPARTMENTS.filter((d) => d !== name);
+  writeDepartments(ALL_DEPARTMENTS);
+  res.json({ ok: true, departments: ALL_DEPARTMENTS });
+});
 
 // ============= Auth (Session) =============
 app.post("/api/register", async (req, res) => {

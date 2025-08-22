@@ -1048,5 +1048,33 @@
     "originalId": "memqceax9xbjm9",
     "erledigtVon": "123"
   },
-  {}
+  {},
+  {
+    "id": "memsrrl2mwg6js",
+    "instanceId": "rec_memsrqhoac21lz_2025-08-22",
+    "erstelltAm": "22.8.2025, 14:19:03",
+    "createdAt": "2025-08-22T12:19:03.397Z",
+    "titel": "Test 1 Aufgabe am Morgen ",
+    "beschreibung": "ich lösche es tägich und schaue was passiert",
+    "kategorie": "Betrieb",
+    "priorität": "mittel",
+    "status": "erledigt",
+    "quelleAbteilung": "Leitstand",
+    "zielAbteilung": null,
+    "completed": true,
+    "completedAt": "2025-08-22T12:19:41.172Z",
+    "erledigtVon": "123",
+    "anleitungUrl": null,
+    "dueDate": "2025-08-22 07:00",
+    "fromRecurring": true,
+    "templateId": "memsrqhoac21lz",
+    "notizen": [
+      {
+        "autor": "123",
+        "text": "erledigt ",
+        "zeit": "22.8.2025, 14:19:34"
+      }
+    ],
+    "anhaenge": []
+  }
 ]

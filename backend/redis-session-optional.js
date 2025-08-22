@@ -34,11 +34,26 @@ export function makeSessionMiddleware(options = {}) {
     const require = createRequire(import.meta.url);
     const connectRedisMod = require('connect-redis');
     const IORedis = require('ioredis');
-    const client = new IORedis(redisUrl);
+    // Provide explicit TLS and retry/connect options that work better with Upstash
+    const client = new IORedis(redisUrl, {
+      tls: {},
+      // reduce noisy retry loop; RedisStore will work with a connected client
+      maxRetriesPerRequest: 5,
+      connectTimeout: 10000,
+      enableReadyCheck: true,
+      // exponential backoff for reconnects
+      retryStrategy: (times) => Math.min(1000 * 2 ** times, 30000),
+    });
 
     // Helpful logs for deployment verification
+    client.on('connect', () => {
+      console.log('redis-session-optional: Redis client connect');
+    });
     client.on('ready', () => {
       console.log('redis-session-optional: Redis client ready');
+    });
+    client.on('reconnecting', (delay) => {
+      console.warn('redis-session-optional: Redis client reconnecting, delay=' + delay);
     });
     client.on('error', (err) => {
       console.error('redis-session-optional: Redis client error:', err && err.message ? err.message : err);

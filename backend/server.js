@@ -11,7 +11,7 @@ import multer from "multer";
 import { makeSessionMiddleware } from "./redis-session-optional.js";
 
 const app = express();
-const PORT = 4000;
+const PORT = Number(process.env.PORT || 4000);
 
 const USERS_FILE = "./users.json";
 const DATA_DIR = "./data";
@@ -277,6 +277,11 @@ async function syncToQuelle(originalId, quelleAbteilung, changes) {
 
 // ✅ Ping
 app.get("/", (req, res) => res.send("✅ Backend läuft!"));
+
+// Health endpoint used by load balancers / hosting health checks
+app.get('/api/health', (req, res) => {
+  res.json({ ok: true, env: process.env.NODE_ENV || 'development' });
+});
 
 // ============= Auth (Session) =============
 app.post("/api/register", async (req, res) => {

@@ -199,13 +199,10 @@ function useServerSavedFilters(username, opts = {}) {
 /* =========================
    Dashboard (selbst-enthaltend)
    ========================= */
-// DEPARTMENTS loaded from server at runtime
-// will be fetched on mount and stored in state
-const DEFAULT_DEPARTMENTS = ["Leitstand", "Technik", "Qualität", "Logistik"];
+const DEPARTMENTS = ["Leitstand", "Technik", "Qualität", "Logistik"];
 const TABS = ["tasks", "meldungen", "wiederkehrend"];
 const KATS = ["Betrieb", "Technik", "IT"];
-// allow overriding the backend URL in production via Vite env var
-const API = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const API = "http://localhost:4000";
 
 // Helpers
 const isImageExt = (url) => /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(url || "");
@@ -238,9 +235,7 @@ const fmtDateTime = (iso) => {
 const SHORT_DESC_LEN = 140;
 
 export default function Dashboard({ user, onLogout }) {
-  const [serverDepartments, setServerDepartments] = useState(DEFAULT_DEPARTMENTS);
-  const [activeDepartment, setActiveDepartment] = useState(serverDepartments[0]);
-  const [newDepartmentName, setNewDepartmentName] = useState("");
+  const [activeDepartment, setActiveDepartment] = useState(DEPARTMENTS[0]);
   const [activeTab, setActiveTab] = useState("tasks");
 
   const [data, setData] = useState([]);
@@ -347,20 +342,6 @@ export default function Dashboard({ user, onLogout }) {
   const [reloadCounter, setReloadCounter] = useState(0);
 
   useEffect(() => {
-    // load departments from server
-    (async () => {
-      try {
-        const r = await fetch(`${API}/api/departments`, { credentials: 'include' });
-        if (r.ok) {
-          const deps = await r.json();
-          if (Array.isArray(deps) && deps.length) {
-            setServerDepartments(deps);
-            setActiveDepartment((prev) => deps.includes(prev) ? prev : deps[0]);
-          }
-        }
-      } catch {}
-    })();
-
     if (prefsLoading) return; // erst laden, wenn Prefs da sind
 
     let cancelled = false;
@@ -671,87 +652,19 @@ export default function Dashboard({ user, onLogout }) {
       <div className="flex flex-col md:flex-row flex-1">
         <aside className="w-full md:w-60 bg-gradient-to-b from-gray-800 to-gray-900 p-5 border-r border-gray-700">
           <h2 className="font-semibold text-lg mb-4 text-gray-200">Abteilungen</h2>
-          {serverDepartments.map((dep) => (
-            <div key={dep} className="group flex items-center gap-2 mb-2">
-              <button
-                onClick={() => setActiveDepartment(dep)}
-                className={`flex-1 text-left px-3 py-2 rounded-md transition-colors ${
-                  activeDepartment === dep
-                    ? "bg-blue-600 text-white shadow"
-                    : "bg-gray-700 text-gray-200 hover:bg-blue-600 hover:text-white"
-                }`}
-              >
-                {dep}
-              </button>
-              {user?.isAdmin && (
-                <button
-                  title="Abteilung entfernen"
-                  onClick={() => {
-                    if (!confirm(`Abteilung '${dep}' entfernen?`)) return;
-                    fetch(`${API}/api/departments/${encodeURIComponent(dep)}`, {
-                      method: 'DELETE',
-                      credentials: 'include'
-                    }).then(async (r) => {
-                      if (!r.ok) return alert('Löschen fehlgeschlagen');
-                      const js = await r.json();
-                      setServerDepartments(js.departments || []);
-                      if (activeDepartment === dep) setActiveDepartment((js.departments||[])[0]||"");
-                    }).catch(() => alert('Löschen fehlgeschlagen'));
-                  }}
-                  className="ml-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-white w-7 h-7 flex items-center justify-center rounded-full bg-red-600 hover:bg-red-700"
-                >
-                  <span className="sr-only">Entfernen</span>
-                  ✖
-                </button>
-              )}
-            </div>
+          {DEPARTMENTS.map((dep) => (
+            <button
+              key={dep}
+              onClick={() => setActiveDepartment(dep)}
+              className={`block w-full text-left px-3 py-2 mb-2 rounded-md transition-colors ${
+                activeDepartment === dep
+                  ? "bg-blue-600 text-white shadow"
+                  : "bg-gray-700 text-gray-200 hover:bg-blue-600 hover:text-white"
+              }`}
+            >
+              {dep}
+            </button>
           ))}
-
-          {user?.isAdmin && (
-            <div className="mt-4">
-              <div className="text-sm text-gray-300 mb-2">Abteilungen verwalten</div>
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  const name = (newDepartmentName || "").trim();
-                  if (!name) return alert("Name eingeben");
-                  try {
-                    const headers = { "Content-Type": "application/json" };
-                    if (user?.username) headers["x-user"] = user.username; // fallback when session cookie missing
-                    const r = await fetch(`${API}/api/departments`, {
-                      method: "POST",
-                      headers,
-                      body: JSON.stringify({ name }),
-                      credentials: "include",
-                    });
-                    if (!r.ok) {
-                      let msg = "Hinzufügen fehlgeschlagen";
-                      try {
-                        const js = await r.json();
-                        if (js?.message) msg += `: ${js.message}`;
-                      } catch (_) {
-                        try {
-                          const txt = await r.text();
-                          if (txt) msg += `: ${txt}`;
-                        } catch (_) {}
-                      }
-                      return alert(msg);
-                    }
-                    const js = await r.json();
-                    setServerDepartments(js.departments || []);
-                    setNewDepartmentName("");
-                    setActiveDepartment((js.departments || [])[0] || "");
-                  } catch (err) {
-                    alert("Hinzufügen fehlgeschlagen: " + (err?.message || String(err)));
-                  }
-                }}
-                className="flex items-center gap-2"
-              >
-                <input value={newDepartmentName} onChange={(e) => setNewDepartmentName(e.target.value)} className="flex-1 p-2 rounded-l bg-gray-700 text-sm border border-gray-600" placeholder="Neue Abteilung" />
-                <button type="submit" className="px-3 py-2 rounded-r bg-green-600 hover:bg-green-700 text-white">+</button>
-              </form>
-            </div>
-          )}
           <button
             onClick={onLogout}
             className="mt-6 w-full text-left px-3 py-2 rounded-md bg-red-600 text-white hover:opacity-95"
@@ -765,66 +678,23 @@ export default function Dashboard({ user, onLogout }) {
           <div className="flex justify-between items-center mb-4">
             <div className="space-x-2">
               {TABS.map((tab) => (
-                <span key={tab} className="inline-flex items-center">
-                  <button
-                    onClick={() => setActiveTab(tab)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                      activeTab === tab
-                        ? "bg-white text-gray-900 shadow"
-                        : "bg-gray-700 text-gray-200 hover:bg-gray-600"
-                    }`}
-                  >
-                    {tab === "tasks"
-                      ? "Tasks"
-                      : tab === "meldungen"
-                      ? "Meldungen"
-                      : "Wiederkehrend"}
-                  </button>
-
-                  {tab === "wiederkehrend" && (
-                    <button
-                      onClick={() => {
-                        // preserve original behavior: open task form when not on wiederkehrend
-                        if (activeTab !== "wiederkehrend") {
-                          setFormVisible(true);
-                          setFormData({
-                            kategorie: "",
-                            titel: "",
-                            beschreibung: "",
-                            priorität: "",
-                            zielAbteilung: "",
-                          });
-                          setEditingIndex(null);
-                          setFiles([]);
-                        } else {
-                          // already on wiederkehrend: ensure recurring form reset
-                          setRecForm({
-                            id: null,
-                            titel: "",
-                            beschreibung: "",
-                            zeit: "07:00",
-                            intervall: "daily",
-                            dueDate: "",
-                            anleitungUrl: "",
-                            vorlaufMin: 120,
-                            cooldownHours: 8,
-                          });
-                          setRecUploadFile(null);
-                          setTimeout(() => setReloadCounter((c) => c + 1), 0);
-                        }
-                      }}
-                      className="ml-2 inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-full shadow"
-                      title="Hinzufügen"
-                      aria-label="Hinzufügen"
-                    >
-                      <span className="text-lg">➕</span>
-                    </button>
-                  )}
-                </span>
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                    activeTab === tab
+                      ? "bg-white text-gray-900 shadow"
+                      : "bg-gray-700 text-gray-200 hover:bg-gray-600"
+                  }`}
+                >
+                  {tab === "tasks"
+                    ? "Tasks"
+                    : tab === "meldungen"
+                    ? "Meldungen"
+                    : "Wiederkehrend"}
+                </button>
               ))}
             </div>
-
-            {/* Add button moved to left of Wiederkehrend tab */}
 
             {activeTab !== "wiederkehrend" && (
               <div className="space-x-2 flex flex-wrap items-center justify-end">
@@ -906,7 +776,23 @@ export default function Dashboard({ user, onLogout }) {
                   <option value="asc">Alt → Neu</option>
                 </select>
 
-                {/* centered Add button is used above; removed duplicate here */}
+                <button
+                  onClick={() => {
+                    setFormVisible(true);
+                    setFormData({
+                      kategorie: "",
+                      titel: "",
+                      beschreibung: "",
+                      priorität: "",
+                      zielAbteilung: "",
+                    });
+                    setEditingIndex(null);
+                    setFiles([]);
+                  }}
+                  className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow"
+                >
+                  <span className="text-lg">➕</span> Hinzufügen
+                </button>
 
                 <button
                   onClick={handleSaveView}
@@ -984,7 +870,7 @@ export default function Dashboard({ user, onLogout }) {
                   }
                 >
                   <option value="">Keine Weiterleitung</option>
-                  {serverDepartments.filter((dep) => dep !== activeDepartment).map(
+                  {DEPARTMENTS.filter((dep) => dep !== activeDepartment).map(
                     (dep) => (
                       <option key={dep} value={dep}>
                         {dep}
@@ -1176,6 +1062,11 @@ export default function Dashboard({ user, onLogout }) {
                             fällig: {item.dueDate}
                           </span>
                         )}
+                        {item.weitergeleitetAn && (
+                          <span className="text-xs bg-purple-700 rounded px-2 py-0.5">
+                            Weitergeleitet an: {item.weitergeleitetAn}
+                          </span>
+                        )}
                       </div>
 
                       {item.expanded ? (
@@ -1207,6 +1098,12 @@ export default function Dashboard({ user, onLogout }) {
                               item.zielAbteilung !== activeDepartment && (
                                 <> | Ziel: {item.zielAbteilung}</>
                               )}
+                            {item.weitergeleitetAn && (
+                              <>
+                                {' '}
+                                | Weitergeleitet an: <strong>{item.weitergeleitetAn}</strong>
+                              </>
+                            )}
                           </div>
 
                           <div className="mt-2">
@@ -1399,7 +1296,7 @@ export default function Dashboard({ user, onLogout }) {
                             className="bg-gray-700 text-xs p-1 rounded"
                           >
                             <option value="">Abteilung wählen</option>
-                            {serverDepartments.filter(
+                            {DEPARTMENTS.filter(
                               (dep) => dep !== activeDepartment
                             ).map((dep) => (
                               <option key={dep} value={dep}>

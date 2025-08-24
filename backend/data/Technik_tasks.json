@@ -67,5 +67,104 @@
     "anhaenge": [],
     "erledigtVon": "123",
     "originalId": "mek3863ilqmmja"
+  },
+  {
+    "kategorie": "Betrieb",
+    "titel": "rrt",
+    "beschreibung": "rtrt",
+    "priorität": "hoch",
+    "zielAbteilung": null,
+    "erstelltVon": "123",
+    "erstelltAm": "24.8.2025, 21:17:54",
+    "status": "erledigt",
+    "id": "meq2m4a6szs4wg",
+    "createdAt": "2025-08-24T19:17:54.606Z",
+    "quelleAbteilung": "Leitstand",
+    "completed": true,
+    "completedAt": "2025-08-24T19:18:20.227Z",
+    "notizen": [
+      {
+        "autor": "123",
+        "text": "fertig",
+        "zeit": "24.8.2025, 21:18:19"
+      }
+    ],
+    "anhaenge": [],
+    "originalId": "meq2m0fjxst4x0",
+    "erledigtVon": "123"
+  },
+  {
+    "kategorie": "Betrieb",
+    "titel": "Serverausfall",
+    "beschreibung": "IT Eskaliert -> TGW Hotline kontaktiert ",
+    "priorität": "",
+    "zielAbteilung": null,
+    "erstelltVon": "123",
+    "erstelltAm": "24.8.2025, 21:27:29",
+    "status": "offen",
+    "id": "meq2yg395opw0m",
+    "createdAt": "2025-08-24T19:27:29.781Z",
+    "quelleAbteilung": "Leitstand",
+    "completed": false,
+    "completedAt": null,
+    "notizen": [
+      {
+        "autor": "123",
+        "text": "TGW Hotline INformiert Status pendent",
+        "zeit": "24.8.2025, 21:27:52"
+      }
+    ],
+    "anhaenge": [],
+    "originalId": "meq2watrclxndu"
+  },
+  {
+    "kategorie": "",
+    "titel": "LTR Stapler Defekt",
+    "beschreibung": "Stecketiketierer Defekt muss ersetzt werden ",
+    "priorität": "",
+    "zielAbteilung": null,
+    "erstelltVon": "123",
+    "erstelltAm": "24.8.2025, 21:30:05",
+    "status": "offen",
+    "id": "meq31sbf1unufo",
+    "createdAt": "2025-08-24T19:30:05.617Z",
+    "quelleAbteilung": "Leitstand",
+    "completed": false,
+    "completedAt": null,
+    "notizen": [
+      {
+        "autor": "123",
+        "text": "Weitergeleitet an: Technik",
+        "zeit": "24.8.2025, 21:30:05"
+      }
+    ],
+    "anhaenge": [],
+    "originalId": "meq2x4rbo7xfn3",
+    "weitergeleitetAn": "Technik"
+  },
+  {
+    "kategorie": "Betrieb",
+    "titel": "WA tor geht nicht auf",
+    "beschreibung": "Klemmt dutch falschbedienung ",
+    "priorität": "hoch",
+    "zielAbteilung": null,
+    "erstelltVon": "123",
+    "erstelltAm": "24.8.2025, 21:31:51",
+    "status": "offen",
+    "id": "meq342ddxcvbxh",
+    "createdAt": "2025-08-24T19:31:51.937Z",
+    "quelleAbteilung": "Leitstand",
+    "completed": false,
+    "completedAt": null,
+    "notizen": [
+      {
+        "autor": "123",
+        "text": "Weitergeleitet an: Technik",
+        "zeit": "24.8.2025, 21:31:51"
+      }
+    ],
+    "anhaenge": [],
+    "originalId": "meq33xgm1kj48s",
+    "weitergeleitetAn": "Technik"
   }
 ]

@@ -1,7 +1,7 @@
 [
   {
     "username": "admin",
-    "password": "$2b$10$UfhL1SnXPwn9jrbfWkXb1u/3jW4Ew8H628JRCNcnfgOzLT0f2oC4O",
+    "password": "$2b$10$QXdvLDXW07RmKjaG68/9HOrMQqS.N4QYVHGFpM0SSZqxuxWEWreR2",
     "isAdmin": true,
     "mustChangePassword": true,
     "createdAt": "2025-08-19T20:57:45.178Z",
@@ -15,7 +15,7 @@
       "meldungen:Leitstand": {
         "status": "offen",
         "kategorie": "alle",
-        "date": "yesterday",
+        "date": "today",
         "sort": "desc"
       },
       "meldungen:Technik": {
@@ -79,7 +79,7 @@
       "meldungen:Leitstand": {
         "status": "alle",
         "kategorie": "alle",
-        "date": "all",
+        "date": "today",
         "sort": "desc"
       },
       "tasks:Leitstand": {
@@ -112,13 +112,13 @@
       "meldungen:Leitstand": {
         "status": "alle",
         "kategorie": "alle",
-        "date": "today",
+        "date": "all",
         "sort": "desc"
       },
       "tasks:Leitstand": {
         "status": "offen",
         "kategorie": "alle",
-        "date": "all",
+        "date": "today",
         "sort": "desc"
       },
       "tasks:Technik": {
@@ -134,7 +134,7 @@
         "sort": "desc"
       },
       "tasks:Logistik": {
-        "status": "alle",
+        "status": "erledigt",
         "kategorie": "alle",
         "date": "all",
         "sort": "desc"
@@ -147,6 +147,12 @@
       },
       "tasks:Qualität": {
         "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "meldungen:Logistik": {
+        "status": "erledigt",
         "kategorie": "alle",
         "date": "all",
         "sort": "desc"

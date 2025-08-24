@@ -754,5 +754,19 @@
     "erledigtVon": "123",
     "archivedAt": "2025-08-22T12:19:41.174Z",
     "dayKey": "2025-08-22"
+  },
+  {
+    "id": "mepkz13temctac",
+    "instanceId": "rec_memsrqhoac21lz_2025-08-24",
+    "templateId": "memsrqhoac21lz",
+    "titel": "Test 1 Aufgabe am Morgen ",
+    "beschreibung": "ich lösche es tägich und schaue was passiert",
+    "quelleAbteilung": "Leitstand",
+    "dueDate": "2025-08-24 15:00",
+    "createdAt": "2025-08-24T11:04:03.927Z",
+    "completedAt": "2025-08-24T19:17:27.591Z",
+    "erledigtVon": "123",
+    "archivedAt": "2025-08-24T19:17:27.592Z",
+    "dayKey": "2025-08-24"
   }
 ]

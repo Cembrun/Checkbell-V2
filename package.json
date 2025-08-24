@@ -16,8 +16,7 @@
     "seed": "node -e \"fetch('http://localhost:4000/api/seed?reset=true&force=true',{method:'POST'}).then(r=>r.text()).then(t=>console.log(t)).catch(e=>{console.error(e);process.exit(1);})\"",
     "build:backend": "cd backend && npm install --no-audit --no-fund",
     "start:backend": "node backend/server.js",
-    "render-start": "node backend/server.js",
-    "start:prod": "cross-env NODE_ENV=production node backend/server.js"
+    "render-start": "node backend/server.js"
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.11",
@@ -45,7 +44,6 @@
     "@vitejs/plugin-react": "^4.6.0",
     "autoprefixer": "^10.4.21",
     "concurrently": "^9.0.1",
-    "cross-env": "^7.0.3",
     "eslint": "^9.30.1",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",

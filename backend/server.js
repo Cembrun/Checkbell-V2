@@ -2,16 +2,14 @@
 import express from "express";
 import fs from "fs";
 import cors from "cors";
-import helmet from "helmet";
-import rateLimit from "express-rate-limit";
 import bodyParser from "body-parser";
 import bcrypt from "bcrypt";
 import path from "path";
 import multer from "multer";
-import { makeSessionMiddleware } from "./redis-session-optional.js";
+import session from "express-session";
 
 const app = express();
-const PORT = Number(process.env.PORT || 4000);
+const PORT = 4000;
 
 const USERS_FILE = "./users.json";
 const DATA_DIR = "./data";
@@ -34,25 +32,21 @@ function ensureDir(p) {
 ensureDir(DATA_DIR);
 ensureDir(UPLOAD_DIR);
 
-// SECURITY: in production we strongly recommend SESSION_SECRET be set.
-// Previously we aborted startup if SESSION_SECRET was missing which causes
-// hosted containers to exit. For now we only log a clear warning so the
-// app can start; please set SESSION_SECRET in your Render/host environment
-// for secure sessions.
-if (process.env.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
-  console.error("WARNING: SESSION_SECRET is NOT set in production. Set process.env.SESSION_SECRET to a strong secret in your host environment.");
-}
-
 // ----- CORS / JSON / Sessions -----
-// Basic security headers
-app.use(helmet());
-
-// CORS configuration
 app.use(
   cors({
     origin(origin, cb) {
       // Preflight/Server-zu-Server ohne Origin erlauben
       if (!origin) return cb(null, true);
+      // In development allow localhost with any port (Vite may pick 75/5173/etc.)
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          const u = new URL(origin);
+          if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return cb(null, true);
+        } catch (e) {
+          // ignore URL parse errors
+        }
+      }
       if (CLIENT_ORIGINS.includes(origin)) return cb(null, true);
       return cb(null, false);
     },
@@ -63,52 +57,30 @@ app.use(
   })
 );
 
-// Rate limiting (global + auth specific)
-const globalLimiter = rateLimit({ windowMs: 60 * 1000, max: 400 });
-app.use(globalLimiter);
-
-const authLimiter = rateLimit({ windowMs: 60 * 1000, max: 5, message: { message: 'Zu viele Loginversuche, bitte später erneut versuchen' } });
-
 // JSON-Parser
 app.use(bodyParser.json());
 
-// Sessions (MemoryStore für Dev oder Redis wenn REDIS_URL gesetzt)
-// makeSessionMiddleware is async (per redis-session-optional.js). Use top-level await
-// to initialize it and provide a clear in-memory fallback on any error.
-try {
-  const sessionMiddleware = await makeSessionMiddleware();
-  app.use(sessionMiddleware);
-} catch (e) {
-  console.error('Session middleware initialization failed, falling back to in-memory sessions:', e && e.message ? e.message : e);
-  try {
-    const mod = await import('express-session');
-    const fallback = mod && mod.default ? mod.default : mod;
-    app.use(
-      fallback({
-        secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
-        resave: false,
-        saveUninitialized: false,
-        cookie: {
-          httpOnly: true,
-          sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-          secure: process.env.NODE_ENV === 'production',
-        },
-      })
-    );
-  } catch (err) {
-    console.error('Failed to initialize fallback session middleware:', err && err.message ? err.message : err);
-  }
-}
+// Sessions (MemoryStore für Dev)
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || "dev-secret-change-me",
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false, // hinter HTTPS => true
+      maxAge: 1000 * 60 * 60 * 8, // 8h
+    },
+  })
+);
 
 // Static /uploads mit passenden Headern
-// Serve uploads but restrict CORS exposure
 app.use(
   "/uploads",
   express.static(UPLOAD_DIR, {
-    setHeaders: (res, pathFile) => {
-      // In prod only allow configured client origin; for dev allow localhost
-      const allowed = process.env.CLIENT_ORIGIN || 'http://localhost:5173';
-      res.setHeader("Access-Control-Allow-Origin", allowed);
+    setHeaders: (res) => {
+      res.setHeader("Access-Control-Allow-Origin", "*");
       res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
     },
   })
@@ -119,16 +91,9 @@ const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
   filename: (req, file, cb) => cb(null, Date.now() + "_" + file.originalname),
 });
-// Allow only common safe types
-const ALLOWED_MIMES = ["image/png", "image/jpeg", "image/jpg", "application/pdf"];
-function fileFilter(req, file, cb) {
-  if (ALLOWED_MIMES.includes(file.mimetype)) return cb(null, true);
-  return cb(new Error('Ungültiger Dateityp'));
-}
 const upload = multer({
   storage,
-  fileFilter,
-  limits: { fileSize: 15 * 1024 * 1024, files: 20 },
+  limits: { fileSize: 50 * 1024 * 1024, files: 20 },
 });
 
 // ----- JSON-Helper -----
@@ -291,11 +256,6 @@ async function syncToQuelle(originalId, quelleAbteilung, changes) {
 // ✅ Ping
 app.get("/", (req, res) => res.send("✅ Backend läuft!"));
 
-// Health endpoint used by load balancers / hosting health checks
-app.get('/api/health', (req, res) => {
-  res.json({ ok: true, env: process.env.NODE_ENV || 'development' });
-});
-
 // ============= Auth (Session) =============
 app.post("/api/register", async (req, res) => {
   const { username, password } = req.body || {};
@@ -318,7 +278,7 @@ app.post("/api/register", async (req, res) => {
   res.json({ message: "Erfolgreich registriert" });
 });
 
-app.post("/api/login", authLimiter, async (req, res) => {
+app.post("/api/login", async (req, res) => {
   const { username, password } = req.body || {};
   const users = getUsersArray();
   const user = users.find((u) => u.username === username);
@@ -864,11 +824,48 @@ app.put("/api/:abteilung/:typ/:idOrIndex/weiterleiten", async (req, res) => {
     createdAt: new Date().toISOString(),
   });
 
+  // Markierung: an welche Abteilung weitergeleitet und System-Notiz hinzufügen
+  try {
+    kopie.weitergeleitetAn = zielAbteilung;
+    kopie.notizen = Array.isArray(kopie.notizen) ? kopie.notizen : [];
+    kopie.notizen.push({
+      autor: req.currentUser?.username || String(req.headers["x-user"] || "").trim() || "system",
+      text: `Weitergeleitet an: ${zielAbteilung}`,
+      zeit: new Date().toLocaleString("de-DE"),
+    });
+  } catch (e) {
+    // Falls irgendwas beim Annotieren schiefgeht, proceed ohne crash
+    console.warn('Weiterleitungs-Annotation fehlgeschlagen:', e?.message || e);
+  }
+
   await withFileLock(pfadZiel, async () => {
     const datenZiel = readJSON(pfadZiel);
     datenZiel.push(kopie);
     writeJSON(pfadZiel, datenZiel);
   });
+
+  // Markiere das Original in der Quelle ebenfalls als weitergeleitet
+  try {
+    await withFileLock(pfadQuelle, async () => {
+      const current = readJSON(pfadQuelle);
+      const idx = current.findIndex((t) => String(t.id) === String(aufgabe.id));
+      if (idx !== -1) {
+        current[idx] = normalizeItem({ ...current[idx] });
+        current[idx].weitergeleitetAn = zielAbteilung;
+        current[idx].notizen = Array.isArray(current[idx].notizen)
+          ? current[idx].notizen
+          : [];
+        current[idx].notizen.push({
+          autor: req.currentUser?.username || String(req.headers["x-user"] || "").trim() || "system",
+          text: `Weitergeleitet an: ${zielAbteilung}`,
+          zeit: new Date().toLocaleString("de-DE"),
+        });
+        writeJSON(pfadQuelle, current);
+      }
+    });
+  } catch (e) {
+    console.warn('Quelle-Annotation fehlgeschlagen:', e?.message || e);
+  }
 
   res.json({ message: "Meldung als Task weitergeleitet", task: kopie });
 });
@@ -1189,20 +1186,12 @@ app.put("/api/:abteilung/:typ/:idOrIndex", uploadFields, async (req, res) => {
   res.json(updated);
 });
 
-// Multer-Fehler / Upload error handling
+// Multer-Fehler
 app.use((err, req, res, next) => {
-  if (!err) return next();
-  if (err.code === "LIMIT_FILE_SIZE") {
+  if (err && (err.code === "LIMIT_FILE_SIZE" || err instanceof multer.MulterError)) {
     return res.status(413).json({ message: "Datei zu groß (max. 15 MB)" });
   }
-  if (err instanceof multer.MulterError) {
-    return res.status(400).json({ message: err.message || "Upload Fehler" });
-  }
-  if (String(err.message || '').includes('Ungültiger Dateityp')) {
-    return res.status(400).json({ message: 'Ungültiger Dateityp. Erlaubt: png,jpg,pdf' });
-  }
-  console.error('Unhandled error:', err);
-  res.status(500).json({ message: 'Interner Serverfehler' });
+  next(err);
 });
 
 /* =========================================================
@@ -1365,25 +1354,20 @@ function seedDepartment(dep, { reset = false } = {}) {
 }
 
 // Seed-Route (GET/POST)
-// Seed-Route (GET/POST) - guarded in production
-if (process.env.NODE_ENV === 'production' && process.env.ALLOW_SEED !== 'true') {
-  app.all('/api/seed', (req, res) => res.status(403).json({ message: 'Seed route forbidden in production' }));
-} else {
-  app.all("/api/seed", (req, res) => {
-    const reset =
-      String(req.query.reset || req.body?.reset || "false").toLowerCase() === "true";
-    const force =
-      String(req.query.force || req.body?.force || "false").toLowerCase() === "true";
+app.all("/api/seed", (req, res) => {
+  const reset =
+    String(req.query.reset || req.body?.reset || "false").toLowerCase() === "true";
+  const force =
+    String(req.query.force || req.body?.force || "false").toLowerCase() === "true";
 
-    const summary = [];
-    for (const dep of ALL_DEPARTMENTS) {
-      summary.push(seedDepartment(dep, { reset }));
-      ensureRecurringInstances(dep, { force }).catch(() => {});
-    }
+  const summary = [];
+  for (const dep of ALL_DEPARTMENTS) {
+    summary.push(seedDepartment(dep, { reset }));
+    ensureRecurringInstances(dep, { force }).catch(() => {});
+  }
 
-    res.json({ ok: true, reset, force, summary });
-  });
-}
+  res.json({ ok: true, reset, force, summary });
+});
 
 // Server
 app.listen(PORT, () => {

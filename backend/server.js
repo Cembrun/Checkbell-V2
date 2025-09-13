@@ -21,6 +21,8 @@ const CLIENT_ORIGINS = [
   "http://localhost:5174",
   "https://checkbellapp.vercel.app",
   "https://checkbellapp.vercel.app/",
+  // User-provided Vercel deployment URL
+  "https://check-bell-ckjz-h5o7jkvrd-cems-projects-97dfc7fd.vercel.app",
 ];
 
 // Basic security headers (minimal, no extra dependency)

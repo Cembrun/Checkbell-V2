@@ -1,1 +1,16 @@
-[]
+[
+  {
+    "id": "mf9tqngv1yds7i",
+    "abteilung": "Technik",
+    "titel": "Test Technik täglich Kühlgeräte prüfen",
+    "beschreibung": "",
+    "zeit": "07:00",
+    "intervall": "daily",
+    "dueDate": null,
+    "anleitungUrl": null,
+    "createdAt": "2025-09-07T15:04:53.071Z",
+    "createdBy": "admin",
+    "vorlaufMin": 120,
+    "cooldownHours": 8
+  }
+]

@@ -160,6 +160,12 @@ export const Users = {
       json: { isAdmin: !!isAdmin },
     });
   },
+  setRole(username, role) {
+    return api(`/api/users/${encodeURIComponent(username)}/role`, {
+      method: "PATCH",
+      json: { role },
+    });
+  },
   resetPassword(username, newPassword) {
     return api(`/api/users/${encodeURIComponent(username)}/password`, {
       method: "PATCH",
@@ -175,6 +181,7 @@ export const Users = {
       json: { mustChange: !!mustChange },
     });
   },
+  
 };
 
 // Listen: Tasks / Meldungen

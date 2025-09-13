@@ -1,0 +1,29 @@
+{
+  "nodes": [
+    {
+      "id": "1757275100857",
+      "position": {
+        "x": -1386.7275911342965,
+        "y": -191.22432690207023
+      },
+      "type": "resizable",
+      "data": {
+        "label": "test",
+        "role": "person"
+      },
+      "style": {
+        "padding": 8
+      },
+      "width": 57,
+      "height": 53,
+      "selected": true,
+      "positionAbsolute": {
+        "x": -1386.7275911342965,
+        "y": -191.22432690207023
+      },
+      "dragging": false
+    }
+  ],
+  "edges": [],
+  "updatedAt": "2025-09-07T19:59:22.676Z"
+}

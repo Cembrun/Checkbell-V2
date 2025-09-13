@@ -1,0 +1,30 @@
+[
+  {
+    "id": "mf7c6qy9ou7bol",
+    "instanceId": "rec_mf5v9kgu778aj2_2025-09-05",
+    "templateId": "mf5v9kgu778aj2",
+    "titel": "test technik aufgabe wiederkehrend ",
+    "beschreibung": "",
+    "quelleAbteilung": "Technik",
+    "dueDate": "2025-09-05 07:00",
+    "createdAt": "2025-09-05T21:17:58.641Z",
+    "completedAt": "2025-09-06T09:12:21.788Z",
+    "erledigtVon": "Cem",
+    "archivedAt": "2025-09-06T09:12:21.788Z",
+    "dayKey": "2025-09-06"
+  },
+  {
+    "id": "mf7sefbckfitxq",
+    "instanceId": "rec_mf5v9kgu778aj2_2025-09-06",
+    "templateId": "mf5v9kgu778aj2",
+    "titel": "test technik aufgabe wiederkehrend ",
+    "beschreibung": "",
+    "quelleAbteilung": "Technik",
+    "dueDate": "2025-09-06 07:00",
+    "createdAt": "2025-09-06T04:51:50.662Z",
+    "completedAt": "2025-09-06T09:12:22.859Z",
+    "erledigtVon": "Cem",
+    "archivedAt": "2025-09-06T09:12:22.860Z",
+    "dayKey": "2025-09-06"
+  }
+]

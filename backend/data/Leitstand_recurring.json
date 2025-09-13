@@ -12,5 +12,33 @@
     "createdBy": "123",
     "vorlaufMin": 120,
     "cooldownHours": 8
+  },
+  {
+    "id": "mf81856mlhlyu2",
+    "abteilung": "Leitstand",
+    "titel": "Test ",
+    "beschreibung": "",
+    "zeit": "14:00",
+    "intervall": "daily",
+    "dueDate": null,
+    "anleitungUrl": null,
+    "createdAt": "2025-09-06T08:58:54.142Z",
+    "createdBy": "123",
+    "vorlaufMin": 120,
+    "cooldownHours": 8
+  },
+  {
+    "id": "mfa22eo9led54q",
+    "abteilung": "Leitstand",
+    "titel": "test für statistik",
+    "beschreibung": "",
+    "zeit": "22:00",
+    "intervall": "daily",
+    "dueDate": null,
+    "anleitungUrl": null,
+    "createdAt": "2025-09-07T18:57:58.473Z",
+    "createdBy": "admin",
+    "vorlaufMin": 120,
+    "cooldownHours": 8
   }
 ]

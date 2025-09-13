@@ -1,0 +1,18 @@
+To start the web application on a host, you need to ensure that the server is running and accessible. Based on the provided server.js file, the application is set to listen on port 4000. 
+
+You can start the application by running the following command in your terminal:
+
+1. Navigate to the directory where your server.js file is located.
+2. Run the command: 
+
+node backend/server.js
+
+This will start the server, and you should see the message "✅ Server läuft auf http://127.0.0.1:4000" in your terminal, indicating that the server is running on localhost at port 4000.
+
+If you want to access the application from a different host or IP address, you can modify the `httpServer.listen` line in your server.js file to listen on `0.0.0.0` instead of `127.0.0.1`. This will allow external connections:
+
+httpServer.listen(PORT, '0.0.0.0', () => {
+  console.log(`✅ Server läuft auf http://0.0.0.0:${PORT}`);
+});
+
+After making this change, restart the server, and it will be accessible from other devices on the same network using your machine's IP address.

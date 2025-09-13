@@ -22,6 +22,7 @@ export default function AdminUsers({ onBack }) {
   const [username, setUsername] = useState("");
   const [tempPw, setTempPw] = useState("");
   const [isAdmin, setIsAdmin] = useState(false);
+  const [role, setRole] = useState("user");
   const [mustChange, setMustChange] = useState(true);
 
   function genPw() {
@@ -77,13 +78,15 @@ export default function AdminUsers({ onBack }) {
         json: {
           username,
           password: tempPw,
-          isAdmin,
+      isAdmin,
+      role,
           mustChangePassword: !!mustChange,
         },
       });
       setUsername("");
       setTempPw("");
       setIsAdmin(false);
+    setRole("user");
       setMustChange(true);
       await load();
       alert("Benutzer angelegt.");
@@ -145,6 +148,28 @@ export default function AdminUsers({ onBack }) {
       alert("Passwort zurückgesetzt.");
     } catch (e) {
       alert(e?.message || "Konnte Passwort nicht zurücksetzen");
+    }
+  }
+
+  async function changeRole(u) {
+    const choice = prompt(
+      `Rolle für "${u.username}" (admin/user/viewer):`,
+      u.role || (u.isAdmin ? "admin" : "user")
+    );
+    if (!choice) return;
+    const next = String(choice).trim();
+    if (!["admin", "user", "viewer"].includes(next)) {
+      alert("Ungültige Rolle");
+      return;
+    }
+    try {
+      await api(`/api/users/${encodeURIComponent(u.username)}/role`, {
+        method: "PATCH",
+        json: { role: next },
+      });
+      setList((prev) => prev.map((x) => (x.username === u.username ? { ...x, role: next, isAdmin: next === "admin" } : x)));
+    } catch (e) {
+      alert(e?.message || "Konnte Rolle nicht ändern");
     }
   }
 
@@ -239,6 +264,19 @@ export default function AdminUsers({ onBack }) {
               <Switch checked={isAdmin} onChange={setIsAdmin} icon={<FiShield />} />
             </div>
 
+            <div className="md:col-span-2">
+              <label className="block text-sm mb-1">Rolle</label>
+              <select
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="w-full border rounded-lg px-3 py-2"
+              >
+                <option value="user">Mitarbeiter</option>
+                <option value="viewer">Viewer (nur Lesen)</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+
             <div className="md:col-span-2 flex items-center gap-3">
               <span className="text-sm">Erst-Login: ändern</span>
               <Switch checked={mustChange} onChange={setMustChange} icon={<FiKey />} />
@@ -270,7 +308,7 @@ export default function AdminUsers({ onBack }) {
               <thead className="bg-gray-50 border-b">
                 <tr className="text-left">
                   <Th>Benutzer</Th>
-                  <Th>Rolle</Th>
+                      <Th>Rolle</Th>
                   <Th>Erst-Login</Th>
                   <Th>Angelegt</Th>
                   <Th className="text-right">Aktionen</Th>
@@ -293,8 +331,8 @@ export default function AdminUsers({ onBack }) {
                         </div>
                       </Td>
                       <Td>
-                        <Badge color={u.isAdmin ? "emerald" : "gray"}>
-                          {u.isAdmin ? "Admin" : "Mitarbeiter"}
+                        <Badge color={u.role === "admin" ? "emerald" : u.role === "viewer" ? "slate" : "gray"}>
+                          {u.role === "admin" ? "Admin" : u.role === "viewer" ? "Viewer" : "Mitarbeiter"}
                         </Badge>
                       </Td>
                       <Td>
@@ -312,6 +350,10 @@ export default function AdminUsers({ onBack }) {
                           <SmallButton onClick={() => toggleAdmin(u)} title="Admin umschalten">
                             <FiShield />
                             {u.isAdmin ? "entziehen" : "geben"}
+                          </SmallButton>
+                          <SmallButton onClick={() => changeRole(u)} title="Rolle ändern">
+                            <FiUserPlus />
+                            Rolle
                           </SmallButton>
                           <SmallButton onClick={() => toggleMustChange(u)} title="Erst-Login-Pflicht umschalten">
                             <FiKey />

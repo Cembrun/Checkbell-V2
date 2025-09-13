@@ -1,0 +1,10 @@
+To start the web application on a host, you need to ensure that the server is running and accessible. Based on the provided server.js file, you can start the application by running the following command in your terminal:
+
+1. Navigate to the directory where your server.js file is located.
+2. Run the command: `node server.js`
+
+Make sure you have Node.js installed on your machine. If you want to run the server in a production environment, consider using a process manager like PM2 or Docker.
+
+If you need to modify the server configuration or set environment variables, ensure that you have a `.env` file in your project root with the necessary configurations, such as `SESSION_SECRET` and `CLIENT_ORIGIN`. 
+
+Once the server is running, you can access the application at `http://127.0.0.1:4000` or the specified host and port in your environment settings.

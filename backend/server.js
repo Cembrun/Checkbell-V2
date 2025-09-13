@@ -6,6 +6,7 @@ import bodyParser from "body-parser";
 import bcrypt from "bcrypt";
 import path from "path";
 import multer from "multer";
+import crypto from "crypto";
 import session from "express-session";
 
 const app = express();
@@ -21,6 +22,27 @@ const CLIENT_ORIGINS = [
   "https://checkbellapp.vercel.app",
   "https://checkbellapp.vercel.app/",
 ];
+
+// Basic security headers (minimal, no extra dependency)
+app.use((req, res, next) => {
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "no-referrer");
+  // disable Google's interest-cohort (FLoC)
+  res.setHeader("Permissions-Policy", "interest-cohort=()", { sameSite: 'Strict' });
+  next();
+});
+
+// Trust proxy if running behind a reverse proxy (useful for secure cookies)
+if (process.env.TRUST_PROXY === '1' || process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
+// Ensure SESSION_SECRET is provided in production
+if (process.env.NODE_ENV === 'production' && !process.env.SESSION_SECRET) {
+  console.error('FATAL: SESSION_SECRET must be set in production (process.env.SESSION_SECRET)');
+  process.exit(1);
+}
 
 // Abteilungen für den Scheduler
 const ALL_DEPARTMENTS = ["Leitstand", "Technik", "Qualität", "Logistik"];
@@ -68,8 +90,9 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: "lax",
-      secure: false, // hinter HTTPS => true
+      sameSite: process.env.COOKIE_SAMESITE || "lax",
+      // in production ensure secure cookies
+      secure: process.env.NODE_ENV === 'production',
       maxAge: 1000 * 60 * 60 * 8, // 8h
     },
   })
@@ -80,7 +103,10 @@ app.use(
   "/uploads",
   express.static(UPLOAD_DIR, {
     setHeaders: (res) => {
-      res.setHeader("Access-Control-Allow-Origin", "*");
+      // Do not allow wildcard origin here; prefer explicit frontend origin from env
+      if (process.env.CLIENT_ORIGIN) {
+        res.setHeader("Access-Control-Allow-Origin", process.env.CLIENT_ORIGIN);
+      }
       res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
     },
   })
@@ -96,11 +122,19 @@ const upload = multer({
   limits: { fileSize: 50 * 1024 * 1024, files: 20 },
 });
 
+// ----- Nodemailer transporter (optional via env) -----
+// nodemailer and email helpers removed (feature paused)
+
 // ----- JSON-Helper -----
 function readJSON(filePath) {
-  return fs.existsSync(filePath)
-    ? JSON.parse(fs.readFileSync(filePath, "utf8"))
-    : Array.isArray(filePath) ? [] : ({}); // Fallback ist egal, wir casten unten ohnehin
+  try {
+    if (!fs.existsSync(filePath)) return [];
+    const raw = fs.readFileSync(filePath, "utf8");
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn('readJSON error for', filePath, e?.message || e);
+    return [];
+  }
 }
 function writeJSON(filePath, data) {
   fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
@@ -132,6 +166,8 @@ function getUsersArray() {
         ...u,
         isAdmin: !!u.isAdmin,
         mustChangePassword: !!u.mustChangePassword,
+        // backward-compatible role: prefer explicit role, fallback to isAdmin
+        role: u.role || (u.isAdmin ? "admin" : "user"),
       }))
     : [];
 }
@@ -142,6 +178,15 @@ function saveUsersArray(arr) {
 function ensureInitialAdmin() {
   let users = getUsersArray();
   const hasAdmin = users.some((u) => u.isAdmin);
+  // Only create default admin in non-production environments to avoid accidental
+  // privileged accounts in production deployments.
+  if (process.env.NODE_ENV === 'production') {
+    if (!users.length || !hasAdmin) {
+      console.warn('No admin user exists in production - please create an admin user manually. Skipping auto-create.');
+    }
+    return;
+  }
+
   if (!users.length || !hasAdmin) {
     const username = "admin";
     const defaultPw = process.env.ADMIN_DEFAULT_PASSWORD || "admin123";
@@ -179,17 +224,27 @@ app.use((req, res, next) => {
   let current = req.session?.user || null;
 
   if (!current) {
-    const actingUser = String(req.headers["x-user"] || "").trim();
-    if (actingUser) {
-      const u = users.find((x) => x.username === actingUser);
-      if (u) {
-        current = {
-          username: u.username,
-          isAdmin: !!u.isAdmin,
-          mustChangePassword: !!u.mustChangePassword,
-        };
+    // In production do NOT accept the x-user header as authentication fallback.
+    // This header is only allowed for local/dev convenience.
+    if (process.env.NODE_ENV !== 'production') {
+      const actingUser = String(req.headers["x-user"] || "").trim();
+      if (actingUser) {
+        const u = users.find((x) => x.username === actingUser);
+        if (u) {
+          current = {
+            username: u.username,
+            isAdmin: !!u.isAdmin,
+            mustChangePassword: !!u.mustChangePassword,
+            role: u.role || (u.isAdmin ? "admin" : "user"),
+          };
+        }
       }
     }
+  }
+  // ensure role present when session provided
+  if (current && !current.role) {
+    const match = users.find((x) => x.username === current.username);
+    if (match) current.role = match.role || (match.isAdmin ? "admin" : "user");
   }
   req.currentUser = current;
   req._users = users;
@@ -205,6 +260,14 @@ function requireAuth(req, res, next) {
 function requireAdmin(req, res, next) {
   if (!req.currentUser?.isAdmin) {
     return res.status(403).json({ message: "Admin erforderlich" });
+  }
+  next();
+}
+
+function requireEditor(req, res, next) {
+  // logged-in users with role 'viewer' are not allowed to mutate data
+  if (req.currentUser && req.currentUser.role === 'viewer') {
+    return res.status(403).json({ message: 'Schreibrechte fehlen (Viewer)' });
   }
   next();
 }
@@ -270,7 +333,8 @@ app.post("/api/register", async (req, res) => {
   users.push({
     username,
     password: hashedPassword,
-    isAdmin: false,
+  isAdmin: false,
+  role: "user",
     mustChangePassword: true,
     createdAt: new Date().toISOString(),
   });
@@ -290,7 +354,8 @@ app.post("/api/login", async (req, res) => {
   const payload = {
     username: user.username,
     isAdmin: !!user.isAdmin,
-    mustChangePassword: !!user.mustChangePassword,
+  mustChangePassword: !!user.mustChangePassword,
+  role: user.role || (user.isAdmin ? "admin" : "user"),
   };
   req.session.user = payload;
   res.json(payload);
@@ -303,7 +368,13 @@ app.post("/api/logout", (req, res) => {
 // Wer bin ich?
 app.get("/api/users/me", (req, res) => {
   if (!req.currentUser) return res.status(401).json({ message: "Nicht eingeloggt" });
-  res.json(req.currentUser);
+  // ensure role present
+  res.json({
+    username: req.currentUser.username,
+    isAdmin: !!req.currentUser.isAdmin,
+    mustChangePassword: !!req.currentUser.mustChangePassword,
+    role: req.currentUser.role || (req.currentUser.isAdmin ? "admin" : "user"),
+  });
 });
 
 // Online-Users (nur Admin) – Sessions auslesen
@@ -329,10 +400,11 @@ app.get("/api/users/online", requireAdmin, (req, res) => {
 /* ============= Admin – Endpunkte ============= */
 app.get("/api/users", requireAdmin, (req, res) => {
   const users = req._users.map(
-    ({ username, isAdmin, createdAt, mustChangePassword }) => ({
+    ({ username, isAdmin, createdAt, mustChangePassword, role }) => ({
       username,
       isAdmin: !!isAdmin,
       mustChangePassword: !!mustChangePassword,
+      role: role || (isAdmin ? "admin" : "user"),
       createdAt: createdAt || null,
     })
   );
@@ -340,7 +412,7 @@ app.get("/api/users", requireAdmin, (req, res) => {
 });
 
 app.post("/api/users", requireAdmin, async (req, res) => {
-  const { username, password, isAdmin } = req.body || {};
+  const { username, password, isAdmin, role } = req.body || {};
   if (!username || !password)
     return res.status(400).json({ message: "username und password sind Pflicht" });
 
@@ -353,11 +425,12 @@ app.post("/api/users", requireAdmin, async (req, res) => {
     username,
     password: hashedPassword,
     isAdmin: !!isAdmin,
+    role: role || (isAdmin ? "admin" : "user"),
     mustChangePassword: true,
     createdAt: new Date().toISOString(),
   });
   saveUsersArray(users);
-  res.json({ username, isAdmin: !!isAdmin, mustChangePassword: true });
+  res.json({ username, isAdmin: !!isAdmin, role: role || (isAdmin ? "admin" : "user"), mustChangePassword: true });
 });
 
 app.patch("/api/users/:username/password", requireAdmin, async (req, res) => {
@@ -393,6 +466,32 @@ app.patch("/api/users/:username/admin", requireAdmin, (req, res) => {
   res.json({ username: u.username, isAdmin: !!u.isAdmin });
 });
 
+// Change role (admin-only)
+app.patch("/api/users/:username/role", requireAdmin, (req, res) => {
+  const target = req.params.username;
+  const { role } = req.body || {};
+  if (!role || !["admin", "user", "viewer"].includes(role)) {
+    return res.status(400).json({ message: "Ungültige Rolle" });
+  }
+  const users = req._users;
+  const u = users.find((x) => x.username === target);
+  if (!u) return res.status(404).json({ message: "Benutzer nicht gefunden" });
+
+  // Protect final admin removal: if removing admin rights from last admin, disallow
+  if (role !== "admin" && u.isAdmin) {
+    const adminCount = users.filter((x) => x.isAdmin).length;
+    if (adminCount <= 1) {
+      return res.status(400).json({ message: "Letzten Admin kann man nicht entfernen" });
+    }
+    u.isAdmin = false;
+  }
+
+  if (role === "admin") u.isAdmin = true;
+  u.role = role;
+  saveUsersArray(users);
+  res.json({ username: u.username, role: u.role, isAdmin: !!u.isAdmin });
+});
+
 app.delete("/api/users/:username", requireAdmin, (req, res) => {
   const actor = req.currentUser?.username || "";
   const target = req.params.username;
@@ -411,6 +510,70 @@ app.delete("/api/users/:username", requireAdmin, (req, res) => {
   users.splice(idx, 1);
   saveUsersArray(users);
   res.json({ ok: true });
+});
+
+/* =========================================================
+   Einteilung: simple containers state + react-flow layout
+   - GET /api/einteilung/containers  -> returns persisted containers state
+   - POST /api/einteilung/containers -> saves state (requires auth)
+   - GET /api/einteilung/layout -> returns react-flow nodes/edges
+   - POST /api/einteilung/layout -> saves react-flow layout (requires auth)
+   ========================================================= */
+
+app.get('/api/einteilung/containers', (req, res) => {
+  const file = path.join(DATA_DIR, 'einteilung_containers.json');
+  if (!fs.existsSync(file)) return res.json({ areas: [], employees: [], assignments: {} });
+  const json = readJSON(file);
+  res.json(json || { areas: [], employees: [], assignments: {} });
+});
+
+app.post('/api/einteilung/containers', requireAuth, async (req, res) => {
+  const body = req.body || {};
+  const file = path.join(DATA_DIR, 'einteilung_containers.json');
+  try {
+    await withFileLock(file, async () => {
+      const stored = readJSON(file) || {};
+      const next = {
+        areas: Array.isArray(body.areas) ? body.areas : stored.areas || [],
+        employees: Array.isArray(body.employees) ? body.employees : stored.employees || [],
+        assignments: body.assignments || stored.assignments || {},
+        updatedAt: body.updatedAt || new Date().toISOString(),
+      };
+      writeJSON(file, next);
+    });
+    // broadcast via socket to inform other clients
+    try { io.emit('assignment:updated', { ...body, server: true, updatedAt: new Date().toISOString() }); } catch (e) {}
+    res.json({ ok: true, stored: readJSON(file) });
+  } catch (e) {
+    res.status(500).json({ message: 'Save failed' });
+  }
+});
+
+app.get('/api/einteilung/layout', (req, res) => {
+  const file = path.join(DATA_DIR, 'einteilung_layout.json');
+  if (!fs.existsSync(file)) return res.json({ nodes: [], edges: [] });
+  const json = readJSON(file);
+  res.json(json || { nodes: [], edges: [] });
+});
+
+app.post('/api/einteilung/layout', requireAuth, async (req, res) => {
+  const body = req.body || {};
+  const file = path.join(DATA_DIR, 'einteilung_layout.json');
+  try {
+    await withFileLock(file, async () => {
+      const stored = readJSON(file) || {};
+      const next = {
+        nodes: Array.isArray(body.nodes) ? body.nodes : stored.nodes || [],
+        edges: Array.isArray(body.edges) ? body.edges : stored.edges || [],
+        updatedAt: body.updatedAt || new Date().toISOString(),
+      };
+      writeJSON(file, next);
+    });
+    try { io.emit('assignment:updated', { ...body, room: 'einteilung:containers', server: true, updatedAt: new Date().toISOString() }); } catch (e) {}
+    res.json({ ok: true, stored: readJSON(file) });
+  } catch (e) {
+    res.status(500).json({ message: 'Save failed' });
+  }
 });
 
 app.patch("/api/users/:username/must-change", requireAdmin, (req, res) => {
@@ -449,6 +612,18 @@ app.patch("/api/users/me/password", requireAuth, async (req, res) => {
   };
   res.json({ ok: true });
 });
+
+/* =========================================================
+   Password reset (token flow)
+   - POST /api/users/password/reset-request  body: { email }
+     -> generates pwResetToken & pwResetExpires (1h) and saves to user record
+     -> in development returns token in response so devs can test without SMTP
+
+   - POST /api/users/password/reset  body: { token, newPassword }
+     -> validates token and expiry, sets new hashed password, clears token
+   ========================================================= */
+
+// Password reset endpoints removed (feature paused)
 
 /* =========================================================
    👤 User Preferences (pro Username)
@@ -794,7 +969,7 @@ async function ensureRecurringInstances(abteilung, opts = { force: false }) {
    ========================================================= */
 
 // Weiterleiten (Meldung -> Task in Zielabteilung)
-app.put("/api/:abteilung/:typ/:idOrIndex/weiterleiten", async (req, res) => {
+app.put("/api/:abteilung/:typ/:idOrIndex/weiterleiten", requireAuth, requireEditor, async (req, res) => {
   const { abteilung, typ, idOrIndex } = req.params;
   const { zielAbteilung } = req.body;
   if (!zielAbteilung) return res.status(400).json({ message: "Zielabteilung fehlt" });
@@ -877,8 +1052,9 @@ const uploadFields = upload.fields([
 ]);
 
 // Anlegen (Meldung/Task)
-app.post("/api/:abteilung/:typ", uploadFields, async (req, res) => {
+app.post("/api/:abteilung/:typ", requireAuth, requireEditor, uploadFields, async (req, res, next) => {
   const { abteilung, typ } = req.params;
+  // (Removed) previously had a special-case for 'einteilung' routes — feature purged
 
   let eintrag = {};
   try {
@@ -993,7 +1169,7 @@ app.get("/api/:abteilung/:typ", (req, res) => {
 });
 
 // Löschen
-app.delete("/api/:abteilung/:typ/:idOrIndex", async (req, res) => {
+app.delete("/api/:abteilung/:typ/:idOrIndex", requireAuth, requireEditor, async (req, res) => {
   const { abteilung, typ, idOrIndex } = req.params;
   const pfad = path.join(DATA_DIR, `${abteilung}_${typ}.json`);
   if (!fs.existsSync(pfad)) return res.status(404).json({ message: "Datei nicht gefunden" });
@@ -1012,7 +1188,7 @@ app.delete("/api/:abteilung/:typ/:idOrIndex", async (req, res) => {
 });
 
 // Status toggeln (Archiv + Sync)
-app.patch("/api/:abteilung/:typ/:idOrIndex/complete", async (req, res) => {
+app.patch("/api/:abteilung/:typ/:idOrIndex/complete", requireAuth, requireEditor, async (req, res) => {
   const { abteilung, typ, idOrIndex } = req.params;
   const { completed, erledigtVon } = req.body;
 
@@ -1090,7 +1266,7 @@ app.patch("/api/:abteilung/:typ/:idOrIndex/complete", async (req, res) => {
 });
 
 // Notiz
-app.post("/api/:abteilung/:typ/:idOrIndex/notiz", async (req, res) => {
+app.post("/api/:abteilung/:typ/:idOrIndex/notiz", requireAuth, requireEditor, async (req, res) => {
   const { abteilung, typ, idOrIndex } = req.params;
   const { autor, text } = req.body;
   if (!autor || !text) return res.status(400).json({ message: "Autor oder Text fehlt" });
@@ -1131,7 +1307,7 @@ app.post("/api/:abteilung/:typ/:idOrIndex/notiz", async (req, res) => {
 });
 
 // Update (append anhaenge)
-app.put("/api/:abteilung/:typ/:idOrIndex", uploadFields, async (req, res) => {
+app.put("/api/:abteilung/:typ/:idOrIndex", requireAuth, requireEditor, uploadFields, async (req, res) => {
   const { abteilung, typ, idOrIndex } = req.params;
   const pfad = path.join(DATA_DIR, `${abteilung}_${typ}.json`);
   if (!fs.existsSync(pfad)) return res.status(404).json({ message: "Datei nicht gefunden" });
@@ -1169,7 +1345,7 @@ app.put("/api/:abteilung/:typ/:idOrIndex", uploadFields, async (req, res) => {
     }));
 
     if (!Array.isArray(after.anhaenge)) after.anhaenge = [];
-    if (neu.length) after.anhaenge = [...after.anhaenge, ...neu];
+    if (neu.length) after.anhaege = [...after.anhaege, ...neu];
     if (after.anhaenge.length > 0) after.anhangDateiUrl = after.anhaenge[0].url;
 
     daten[i] = normalizeItem(after);
@@ -1369,7 +1545,108 @@ app.all("/api/seed", (req, res) => {
   res.json({ ok: true, reset, force, summary });
 });
 
-// Server
-app.listen(PORT, () => {
-  console.log(`✅ Server läuft auf http://localhost:${PORT}`);
+// Server: HTTP + Socket.IO für Realtime
+import http from 'http';
+import { Server as IOServer } from 'socket.io';
+
+const httpServer = http.createServer(app);
+const io = new IOServer(httpServer, {
+  cors: {
+    // allow any localhost origin (any port) during development and the deployed origin
+    origin: process.env.CLIENT_ORIGIN
+      ? [process.env.CLIENT_ORIGIN, 'https://checkbellapp.vercel.app']
+      : [/^http:\/\/localhost(:\d+)?$/i, 'https://checkbellapp.vercel.app'],
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
 });
+
+// In-memory guard to avoid broadcasting outdated or duplicate container updates
+let lastContainersBroadcastAt = null;
+
+io.on('connection', (socket) => {
+
+  console.log('Socket connected:', socket.id);
+
+  // TEST: Sende Test-Event an Client
+  socket.emit('test', 'Hallo vom Server! Die Socket-Verbindung steht.');
+
+  socket.on('joinRoom', (room) => {
+    socket.join(room);
+    console.log('joined room', room);
+  });
+
+  socket.on('assignment:update', async (payload) => {
+    // payload: { room, nodes, edges, employeeId, toNodeId, position }
+    try {
+      const room = payload?.room || null;
+      // Persist container-style payloads (areas/employees/assignments)
+      try {
+        const stampedAt = payload?.updatedAt || new Date().toISOString();
+        // If payload looks like the containers model, persist to file
+        if (payload?.areas || payload?.employees || payload?.assignments) {
+          const file = path.join(DATA_DIR, 'einteilung_containers.json');
+          await withFileLock(file, async () => {
+            const current = readJSON(file) || {};
+            const stored = {
+              areas: payload.areas || current.areas || [],
+              employees: payload.employees || current.employees || [],
+              assignments: payload.assignments || current.assignments || {},
+              updatedAt: stampedAt,
+              clientId: payload?.clientId || null,
+            };
+            writeJSON(file, stored);
+          });
+        }
+
+        // If payload looks like a react-flow layout, persist to a separate file
+        if (payload?.nodes || payload?.edges) {
+          const file = path.join(DATA_DIR, 'einteilung_layout.json');
+          await withFileLock(file, async () => {
+            const current = readJSON(file) || {};
+            const stored = {
+              nodes: payload.nodes || current.nodes || [],
+              edges: payload.edges || current.edges || [],
+              updatedAt: stampedAt,
+              clientId: payload?.clientId || null,
+            };
+            writeJSON(file, stored);
+          });
+        }
+      } catch (e) {
+        console.warn('[socket] persist failed', e?.message || e);
+      }
+
+      // Broadcast to other clients. If a room is provided, send to that room; otherwise emit globally.
+      try {
+        const candidateTs = payload?.updatedAt ? Date.parse(payload.updatedAt) : Date.now();
+        const lastTs = lastContainersBroadcastAt ? Date.parse(lastContainersBroadcastAt) : 0;
+        if (room) {
+          // broadcast to room (exclude sender)
+          socket.broadcast.to(room).emit('assignment:updated', payload);
+          lastContainersBroadcastAt = new Date().toISOString();
+        } else {
+          // global emit
+          io.emit('assignment:updated', payload);
+          lastContainersBroadcastAt = new Date().toISOString();
+        }
+      } catch (e) {
+        console.warn('[socket] broadcast failed', e?.message || e);
+      }
+    } catch (e) {
+      console.warn('Failed to persist/broadcast assignment update:', e?.message || e);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Socket disconnected:', socket.id);
+  });
+});
+
+// Bind explicitly to 127.0.0.1 to ensure IPv4 loopback binding on Windows
+const HOST = process.env.HOST || '127.0.0.1';
+httpServer.listen(PORT, HOST, () => {
+  console.log(`✅ Server läuft auf http://${HOST}:${PORT}`);
+});
+
+// Einteilung feature removed from codebase

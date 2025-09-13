@@ -21,10 +21,17 @@ function fmtDate(iso) {
 }
 
 export default function Archive({ onClose }) {
+  // accept optional user prop in case App passes it
+  // eslint-disable-next-line no-unused-vars
+  const props = arguments[0] || {};
+  const user = props.user;
+  const canEdit = !(user && user.role === 'viewer');
   const [abteilung, setAbteilung] = useState(DEPARTMENTS[0]);
   const [typ, setTyp] = useState("tasks");
   const [day, setDay] = useState("all");
   const [search, setSearch] = useState("");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState([]);
   const [error, setError] = useState("");
@@ -55,20 +62,48 @@ export default function Archive({ onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [abteilung, typ, day]);
 
-  // Suche/Filter (clientseitig)
+  // Suche + Datumsbereich Filter (clientseitig)
   const filtered = useMemo(() => {
-    const s = search.trim().toLowerCase();
-    if (!s) return items;
+    const s = (search || '').trim().toLowerCase();
+
+    // parse date bounds (YYYY-MM-DD inputs)
+    let fromTs = null;
+    let toTs = null;
+    try {
+      if (fromDate) {
+        const d = new Date(fromDate + 'T00:00:00');
+        if (!isNaN(d)) fromTs = d.getTime();
+      }
+      if (toDate) {
+        const d = new Date(toDate + 'T23:59:59');
+        if (!isNaN(d)) toTs = d.getTime();
+      }
+    } catch (e) {}
+
     return items.filter((it) => {
+      // Date filter applies to createdAt / erstelltAm
+      const rawDate = it.createdAt || it.erstelltAm || it.completedAt || null;
+      let itemTs = null;
+      if (rawDate) {
+        const d = new Date(rawDate);
+        if (!isNaN(d)) itemTs = d.getTime();
+      }
+
+      if (fromTs !== null && (itemTs === null || itemTs < fromTs)) return false;
+      if (toTs !== null && (itemTs === null || itemTs > toTs)) return false;
+
+      if (!s) return true;
+
       return (
-        String(it.titel || "").toLowerCase().includes(s) ||
-        String(it.beschreibung || "").toLowerCase().includes(s) ||
-        String(it.kategorie || "").toLowerCase().includes(s) ||
-        String(it.priorität || "").toLowerCase().includes(s) ||
-        String(it.erledigtVon || "").toLowerCase().includes(s)
+        String(it.titel || '').toLowerCase().includes(s) ||
+        String(it.beschreibung || '').toLowerCase().includes(s) ||
+        String(it.kategorie || '').toLowerCase().includes(s) ||
+        String(it.priorität || '').toLowerCase().includes(s) ||
+        String(it.erledigtVon || '').toLowerCase().includes(s)
       );
     });
-  }, [items, search]);
+  }, [items, search, fromDate, toDate]);
+
 
   // Paging berechnen
   const total = filtered.length;
@@ -86,6 +121,7 @@ export default function Archive({ onClose }) {
 
   async function restore(it) {
     try {
+      if (!canEdit) return alert('Keine Berechtigung (Viewer)');
       await Data.toggleComplete(abteilung, typ, it.id ?? it._index ?? 0, {
         completed: false,
         erledigtVon: localStorage.getItem("username") || "unbekannt",
@@ -101,6 +137,7 @@ export default function Archive({ onClose }) {
   }
 
   async function remove(it) {
+    if (!canEdit) return alert('Keine Berechtigung (Viewer)');
     if (!confirm(`Wirklich löschen?\n"${it.titel || it.id}"`)) return;
     try {
       await Data.remove(abteilung, typ, it.id ?? it._index ?? 0);
@@ -148,6 +185,38 @@ export default function Archive({ onClose }) {
     URL.revokeObjectURL(url);
   }
 
+  // Excel Export (XLSX using SheetJS)
+  async function exportXLSX() {
+    if (!filtered.length) return;
+    try {
+      const rows = filtered.map((it) => ({
+        Titel: it.titel || '',
+        Beschreibung: it.beschreibung || '',
+        Kategorie: it.kategorie || '',
+        Priorität: it.priorität || '',
+        Erstellt: fmtDate(it.createdAt || it.erstelltAm),
+        Erledigt: fmtDate(it.completedAt),
+        'Erledigt von': it.erledigtVon || '',
+        Wiederkehrend: it.templateId ? 'Ja' : 'Nein',
+        Anhänge: (it.anhaenge || []).map(a => a.name || a.url).join('; ')
+      }));
+
+      const mod = await import('xlsx');
+      const XLSX = mod && mod.utils ? mod : (mod.default || mod);
+      const ws = XLSX.utils.json_to_sheet(rows);
+      // set column widths for readability
+      const wscols = Object.keys(rows[0] || {}).map(k => ({ wch: Math.min(Math.max(10, k.length + 6), 40) }));
+      ws['!cols'] = wscols;
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Archiv');
+      const filename = `archiv_export_${abteilung}_${typ}.xlsx`;
+      XLSX.writeFile(wb, filename);
+    } catch (e) {
+      console.error('XLSX export failed', e);
+      alert('Excel Export fehlgeschlagen — bitte npm install xlsx ausführen und die Seite neu laden.');
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 flex items-center justify-center p-4">
       {/* Panel */}
@@ -172,6 +241,13 @@ export default function Archive({ onClose }) {
               CSV Export
             </button>
             <button
+              onClick={exportXLSX}
+              className="px-4 py-2 rounded-lg border border-green-600 bg-green-600 text-white font-semibold shadow-sm hover:bg-green-700 transition"
+              title="Als Excel exportieren"
+            >
+              Excel Export
+            </button>
+            <button
               onClick={load}
               className="px-4 py-2 rounded-lg border shadow-sm hover:bg-gray-50 font-semibold"
               title="Aktualisieren"
@@ -190,7 +266,7 @@ export default function Archive({ onClose }) {
 
         {/* Filter-Zeile */}
         <div className="px-8 py-4 border-b bg-white/80">
-          <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
             <select
               className="border-2 border-gray-300 rounded-lg px-3 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
               value={abteilung}
@@ -226,6 +302,22 @@ export default function Archive({ onClose }) {
                 </option>
               ))}
             </select>
+
+            <input
+              type="date"
+              className="border-2 border-gray-300 rounded-lg px-3 py-2"
+              value={fromDate}
+              onChange={(e) => { setFromDate(e.target.value); setPage(1); }}
+              title="Von (Datum)"
+            />
+
+            <input
+              type="date"
+              className="border-2 border-gray-300 rounded-lg px-3 py-2"
+              value={toDate}
+              onChange={(e) => { setToDate(e.target.value); setPage(1); }}
+              title="Bis (Datum)"
+            />
 
             <input
               className="border-2 border-gray-300 rounded-lg px-3 py-2 md:col-span-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
@@ -336,15 +428,17 @@ export default function Archive({ onClose }) {
 
                         <div className="flex items-center gap-2 shrink-0">
                           <button
-                            onClick={() => restore(it)}
-                            className="px-3 py-1.5 rounded-lg border hover:bg-gray-50"
+                            onClick={canEdit ? () => restore(it) : undefined}
+                            disabled={!canEdit}
+                            className={`px-3 py-1.5 rounded-lg border ${canEdit ? 'hover:bg-gray-50' : 'opacity-60 cursor-not-allowed'}`}
                             title="Wieder öffnen"
                           >
                             Wieder öffnen
                           </button>
                           <button
-                            onClick={() => remove(it)}
-                            className="px-3 py-1.5 rounded-lg border bg-red-600 text-white hover:bg-red-700"
+                            onClick={canEdit ? () => remove(it) : undefined}
+                            disabled={!canEdit}
+                            className={`px-3 py-1.5 rounded-lg border ${canEdit ? 'bg-red-600 text-white hover:bg-red-700' : 'bg-gray-300 text-slate-700 opacity-60 cursor-not-allowed'}`}
                             title="Endgültig löschen"
                           >
                             Löschen

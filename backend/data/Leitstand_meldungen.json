@@ -7,14 +7,15 @@
     "zielAbteilung": "",
     "erstelltVon": "123",
     "erstelltAm": "24.8.2025, 21:24:00",
-    "status": "offen",
+    "status": "erledigt",
     "id": "meq2typ3g8idut",
     "createdAt": "2025-08-24T19:24:00.615Z",
     "quelleAbteilung": "Leitstand",
-    "completed": false,
-    "completedAt": null,
+    "completed": true,
+    "completedAt": "2025-09-07T17:47:28.874Z",
     "notizen": [],
-    "anhaenge": []
+    "anhaenge": [],
+    "erledigtVon": "admin"
   },
   {
     "kategorie": "Technik",
@@ -24,14 +25,15 @@
     "zielAbteilung": "",
     "erstelltVon": "123",
     "erstelltAm": "24.8.2025, 21:25:02",
-    "status": "offen",
+    "status": "erledigt",
     "id": "meq2va3ofek3z6",
     "createdAt": "2025-08-24T19:25:02.052Z",
     "quelleAbteilung": "Leitstand",
-    "completed": false,
-    "completedAt": null,
+    "completed": true,
+    "completedAt": "2025-09-07T18:56:32.420Z",
     "notizen": [],
-    "anhaenge": []
+    "anhaenge": [],
+    "erledigtVon": "admin"
   },
   {
     "kategorie": "Betrieb",
@@ -41,12 +43,12 @@
     "zielAbteilung": "",
     "erstelltVon": "123",
     "erstelltAm": "24.8.2025, 21:25:49",
-    "status": "offen",
+    "status": "erledigt",
     "id": "meq2watrclxndu",
     "createdAt": "2025-08-24T19:25:49.647Z",
     "quelleAbteilung": "Leitstand",
-    "completed": false,
-    "completedAt": null,
+    "completed": true,
+    "completedAt": "2025-09-07T18:56:31.639Z",
     "notizen": [
       {
         "autor": "123",
@@ -54,7 +56,8 @@
         "zeit": "24.8.2025, 21:27:52"
       }
     ],
-    "anhaenge": []
+    "anhaenge": [],
+    "erledigtVon": "admin"
   },
   {
     "kategorie": "",
@@ -64,14 +67,22 @@
     "zielAbteilung": "",
     "erstelltVon": "123",
     "erstelltAm": "24.8.2025, 21:26:28",
-    "status": "offen",
+    "status": "erledigt",
     "id": "meq2x4rbo7xfn3",
     "createdAt": "2025-08-24T19:26:28.439Z",
     "quelleAbteilung": "Leitstand",
-    "completed": false,
-    "completedAt": null,
-    "notizen": [],
-    "anhaenge": []
+    "completed": true,
+    "completedAt": "2025-09-07T18:56:30.871Z",
+    "notizen": [
+      {
+        "autor": "admin",
+        "text": "Weitergeleitet an: Technik",
+        "zeit": "24.8.2025, 21:46:55"
+      }
+    ],
+    "anhaenge": [],
+    "weitergeleitetAn": "Technik",
+    "erledigtVon": "admin"
   },
   {
     "kategorie": "Betrieb",
@@ -81,13 +92,31 @@
     "zielAbteilung": "",
     "erstelltVon": "123",
     "erstelltAm": "24.8.2025, 21:31:45",
-    "status": "offen",
+    "status": "erledigt",
     "id": "meq33xgm1kj48s",
     "createdAt": "2025-08-24T19:31:45.574Z",
     "quelleAbteilung": "Leitstand",
-    "completed": false,
-    "completedAt": null,
-    "notizen": [],
-    "anhaenge": []
+    "completed": true,
+    "completedAt": "2025-09-08T04:11:25.555Z",
+    "notizen": [
+      {
+        "autor": "admin",
+        "text": "Weitergeleitet an: Technik",
+        "zeit": "24.8.2025, 21:46:40"
+      },
+      {
+        "autor": "admin",
+        "text": "erledigt",
+        "zeit": "24.8.2025, 21:47:10"
+      },
+      {
+        "autor": "admin",
+        "text": "Weitergeleitet an: Technik",
+        "zeit": "7.9.2025, 22:22:31"
+      }
+    ],
+    "anhaenge": [],
+    "weitergeleitetAn": "Technik",
+    "erledigtVon": "admin"
   }
 ]

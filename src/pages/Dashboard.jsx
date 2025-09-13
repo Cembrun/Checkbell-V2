@@ -1,5 +1,9 @@
 // src/pages/Dashboard.jsx
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import ErrorBoundary from "../components/ErrorBoundary.jsx";
+import EinteilungContainer from './EinteilungContainer.jsx';
+import EinteilungAnlagenbetreuer from './EinteilungAnlagenbetreuer.jsx';
 import { exportSinglePDFWithImages } from "../utils/pdfExport";
 
 /* =========================
@@ -76,10 +80,22 @@ function useServerSavedFilters(username, opts = {}) {
   const LS_KEY = `checkbell:prefs:${username}:${scope}`;
 
   const fetchJSON = async (url, init) => {
+    // include an x-user header fallback (from localStorage) for development
+    // so components that call fetch directly (no central api helper) still
+    // provide the backend a recognizable user for requireAuth fallback.
+    const usernameHeader = (function () {
+      try {
+        return localStorage.getItem("username") || "";
+      } catch (e) {
+        return "";
+      }
+    })();
+
     const res = await fetch(url, {
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        "x-user": (init && init.headers && init.headers["x-user"]) || usernameHeader,
         ...(init && init.headers ? init.headers : {}),
       },
       ...(init || {}),
@@ -200,7 +216,8 @@ function useServerSavedFilters(username, opts = {}) {
    Dashboard (selbst-enthaltend)
    ========================= */
 const DEPARTMENTS = ["Leitstand", "Technik", "Qualität", "Logistik"];
-const TABS = ["tasks", "meldungen", "wiederkehrend"];
+// add 'einteilung' tab so the Anlagenbetreuer assignment UI is embedded in the Dashboard
+const TABS = ["tasks", "meldungen", "wiederkehrend", "einteilung"];
 const KATS = ["Betrieb", "Technik", "IT"];
 const API = "http://localhost:4000";
 
@@ -234,9 +251,10 @@ const fmtDateTime = (iso) => {
 // Short description cutoff for collapsed view
 const SHORT_DESC_LEN = 140;
 
-export default function Dashboard({ user, onLogout }) {
+export default function Dashboard({ user, onLogout, initialTab = null }) {
   const [activeDepartment, setActiveDepartment] = useState(DEPARTMENTS[0]);
-  const [activeTab, setActiveTab] = useState("tasks");
+  const [activeTab, setActiveTab] = useState(initialTab || "tasks");
+  const navigate = useNavigate();
 
   const [data, setData] = useState([]);
   const [listLoading, setListLoading] = useState(false);
@@ -279,6 +297,7 @@ export default function Dashboard({ user, onLogout }) {
 
   // Preview
   const [preview, setPreview] = useState(null);
+  // Einteilung feature removed
   useEffect(() => {
     const onKey = (e) => e.key === "Escape" && setPreview(null);
     window.addEventListener("keydown", onKey);
@@ -304,6 +323,20 @@ export default function Dashboard({ user, onLogout }) {
     version: 1,
     defaults: { status: "alle", kategorie: "alle", date: "all", sort: "desc" },
   });
+
+  // UI guard: viewer role should not be able to perform mutating actions
+  const canEdit = !(user && user.role === 'viewer');
+
+  // Don't render raw server error for unauthenticated state.
+  // Backend may return plain text "Nicht eingeloggt" when no session is present;
+  // hide that from the UI to avoid the ugly JSON-like message the user reported.
+  const formattedPrefsError = (() => {
+    if (!prefsError) return null;
+    const msg = typeof prefsError === "string" ? prefsError : prefsError?.message || String(prefsError);
+    if (!msg) return null;
+    if (String(msg).includes("Nicht eingeloggt")) return null;
+    return msg;
+  })();
 
   // „Gespeichert!“ Toast
   const [justSaved, setJustSaved] = useState(false);
@@ -340,6 +373,15 @@ export default function Dashboard({ user, onLogout }) {
   const fetchSeq = useRef(0);
   // reloadCounter: use state to trigger re-fetches from UI actions
   const [reloadCounter, setReloadCounter] = useState(0);
+
+  // Auto-refresh: increment reloadCounter every 3 minutes so the main fetch effect runs
+  useEffect(() => {
+    const MS = 3 * 60 * 1000; // 3 minutes
+    const id = setInterval(() => {
+      setReloadCounter(c => c + 1);
+    }, MS);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     if (prefsLoading) return; // erst laden, wenn Prefs da sind
@@ -444,7 +486,8 @@ export default function Dashboard({ user, onLogout }) {
 
   // CRUD (create/complete/delete/forward/note)
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
+  if (!canEdit) return alert('Nur Lesezugriff: keine Schreibrechte.');
     // normalize targets: support single string or array from formData.zielAbteilung
     const targets =
       activeTab === "meldungen" && formData.zielAbteilung
@@ -637,18 +680,6 @@ export default function Dashboard({ user, onLogout }) {
   /* ----------------- UI ----------------- */
   return (
     <div className="flex flex-col min-h-screen bg-gray-900 text-white">
-      <header className="bg-gradient-to-r from-blue-700 to-indigo-700 p-4 flex justify-between items-center shadow-lg">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-lg">CB</div>
-          <h1 className="text-2xl font-extrabold text-white tracking-tight">CheckBell</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="text-sm text-white/90 bg-white/5 px-3 py-1 rounded-md">
-            <span className="font-medium">{user.username}</span>
-          </div>
-        </div>
-      </header>
-
       <div className="flex flex-col md:flex-row flex-1">
         <aside className="w-full md:w-60 bg-gradient-to-b from-gray-800 to-gray-900 p-5 border-r border-gray-700">
           <h2 className="font-semibold text-lg mb-4 text-gray-200">Abteilungen</h2>
@@ -665,6 +696,8 @@ export default function Dashboard({ user, onLogout }) {
               {dep}
             </button>
           ))}
+          {/* Planung section removed */}
+
           <button
             onClick={onLogout}
             className="mt-6 w-full text-left px-3 py-2 rounded-md bg-red-600 text-white hover:opacity-95"
@@ -674,34 +707,39 @@ export default function Dashboard({ user, onLogout }) {
         </aside>
 
         <main className="flex-1 p-6">
+          {/* Einteilung removed */}
           {/* Tabs + Filter */}
-          <div className="flex justify-between items-center mb-4">
-            <div className="space-x-2">
-              {TABS.map((tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    activeTab === tab
-                      ? "bg-white text-gray-900 shadow"
-                      : "bg-gray-700 text-gray-200 hover:bg-gray-600"
-                  }`}
-                >
-                  {tab === "tasks"
-                    ? "Tasks"
-                    : tab === "meldungen"
-                    ? "Meldungen"
-                    : "Wiederkehrend"}
-                </button>
-              ))}
+          <div className="flex flex-col gap-3 mb-4">
+            {/* Top tab bar (static) - stays at top of the main content but does not follow while scrolling */}
+            <div className="w-full bg-transparent px-0 py-2">
+              <div className="flex flex-wrap gap-2 items-center">
+                {TABS.map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`px-3 py-2 rounded-full text-sm md:text-base transition-colors ${
+                      activeTab === tab
+                        ? "bg-white text-gray-900 shadow"
+                        : "bg-gray-700 text-gray-200 hover:bg-gray-600"
+                    }`}
+                    style={{ minWidth: 84 }}
+                  >
+                    {tab === "tasks"
+                      ? "Tasks"
+                      : tab === "meldungen"
+                      ? "Meldungen"
+                      : tab === "wiederkehrend"
+                      ? "Wiederkehrend"
+                      : tab}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {activeTab !== "wiederkehrend" && (
+            {activeTab !== "wiederkehrend" && activeTab !== "einteilung" && (
               <div className="space-x-2 flex flex-wrap items-center justify-end">
-                {prefsError && (
-                  <span className="text-red-400 text-xs">
-                    Prefs: {String(prefsError)}
-                  </span>
+                {formattedPrefsError && (
+                  <span className="text-red-400 text-xs">{formattedPrefsError}</span>
                 )}
                 {prefsLoading && (
                   <span className="text-xs text-gray-400">
@@ -777,7 +815,7 @@ export default function Dashboard({ user, onLogout }) {
                 </select>
 
                 <button
-                  onClick={() => {
+                  onClick={canEdit ? () => {
                     setFormVisible(true);
                     setFormData({
                       kategorie: "",
@@ -788,8 +826,9 @@ export default function Dashboard({ user, onLogout }) {
                     });
                     setEditingIndex(null);
                     setFiles([]);
-                  }}
-                  className="inline-flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow"
+                  } : undefined}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg shadow ${canEdit ? 'bg-green-500 hover:bg-green-600 text-white' : 'bg-gray-600 text-slate-300 opacity-60 cursor-not-allowed'}`}
+                  disabled={!canEdit}
                 >
                   <span className="text-lg">➕</span> Hinzufügen
                 </button>
@@ -809,7 +848,7 @@ export default function Dashboard({ user, onLogout }) {
           </div>
 
           {/* Formular (Tasks/Meldungen) */}
-          {activeTab !== "wiederkehrend" && formVisible && (
+          {activeTab !== "wiederkehrend" && activeTab !== "einteilung" && formVisible && (
             <form
               onSubmit={handleSubmit}
               className="bg-gradient-to-b from-gray-800 to-gray-900 p-5 rounded-lg space-y-4 mb-6 shadow-inner border border-gray-700"
@@ -967,8 +1006,22 @@ export default function Dashboard({ user, onLogout }) {
             </form>
           )}
 
+          {/* Einteilung Tab: render existing Einteilung components */}
+          {activeTab === 'einteilung' && (
+            <div className="mt-4">
+              <ErrorBoundary>
+                <div className="mb-4">
+                  <EinteilungContainer user={user} />
+                </div>
+                <div className="mt-6">
+                  <EinteilungAnlagenbetreuer />
+                </div>
+              </ErrorBoundary>
+            </div>
+          )}
+
           {/* Liste (Tasks/Meldungen) */}
-          {activeTab !== "wiederkehrend" && (
+          {activeTab !== "wiederkehrend" && activeTab !== "einteilung" && (
             <div className="space-y-3">
               {listError && (
                 <div className="text-red-400 text-sm">{listError}</div>
@@ -1063,9 +1116,15 @@ export default function Dashboard({ user, onLogout }) {
                           </span>
                         )}
                         {item.weitergeleitetAn && (
-                          <span className="text-xs bg-purple-700 rounded px-2 py-0.5">
-                            Weitergeleitet an: {item.weitergeleitetAn}
-                          </span>
+                          activeDepartment === item.quelleAbteilung ? (
+                            <span className="inline-flex items-center gap-1 text-xs bg-purple-600 text-white rounded px-2 py-0.5 font-medium">
+                              🔁 Weitergeleitet an: {item.weitergeleitetAn}
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-xs bg-purple-600 text-white rounded px-2 py-0.5 font-medium">
+                              📥 Quelle {item.quelleAbteilung}
+                            </span>
+                          )
                         )}
                       </div>
 
@@ -1098,7 +1157,7 @@ export default function Dashboard({ user, onLogout }) {
                               item.zielAbteilung !== activeDepartment && (
                                 <> | Ziel: {item.zielAbteilung}</>
                               )}
-                            {item.weitergeleitetAn && (
+                            {item.weitergeleitetAn && activeDepartment === item.quelleAbteilung && (
                               <>
                                 {' '}
                                 | Weitergeleitet an: <strong>{item.weitergeleitetAn}</strong>
@@ -1187,8 +1246,9 @@ export default function Dashboard({ user, onLogout }) {
                                 onChange={(e) => setNotizText(e.target.value)}
                               />
                               <button
-                                onClick={() => handleAddNotiz(index)}
-                                className="bg-blue-600 px-2 py-1 rounded text-sm"
+                                onClick={() => { if (canEdit) handleAddNotiz(index); else alert('Nur Lesezugriff'); }}
+                                disabled={!canEdit}
+                                className={`${canEdit ? 'bg-blue-600' : 'bg-gray-600 text-slate-300 opacity-60 cursor-not-allowed'} px-2 py-1 rounded text-sm`}
                               >
                                 Speichern
                               </button>
@@ -1204,11 +1264,9 @@ export default function Dashboard({ user, onLogout }) {
                             </div>
                           ) : (
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveNotizIndex(index);
-                              }}
-                              className="mt-2 text-xs text-blue-400 underline"
+                              onClick={(e) => { e.stopPropagation(); if (canEdit) setActiveNotizIndex(index); else alert('Nur Lesezugriff'); }}
+                              className={`mt-2 text-xs ${canEdit ? 'text-blue-400 underline' : 'text-slate-400 opacity-60 cursor-not-allowed'}`}
+                              disabled={!canEdit}
                             >
                               ➕ Notiz hinzufügen
                             </button>
@@ -1241,35 +1299,35 @@ export default function Dashboard({ user, onLogout }) {
                       )}
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center mt-3 sm:mt-0">
+                    <div className="flex items-center gap-3 mt-3 sm:mt-0">
+                      <label className="flex items-center gap-2 text-sm">
+                        <input
+                          type="checkbox"
+                          checked={!!item.completed}
+                          onChange={(e) => { e.stopPropagation(); if (canEdit) toggleCompleted(index); else alert('Nur Lesezugriff'); }}
+                          disabled={!canEdit}
+                          className="w-4 h-4 rounded"
+                        />
+                      </label>
+
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleCompleted(index);
-                        }}
-                        className={`px-3 py-1 rounded-md text-sm font-medium transition ${
-                          item.completed ? "bg-gray-600 text-white" : "bg-green-600 text-white"
-                        }`}
+                        onClick={canEdit ? (e) => { e.stopPropagation(); handleEdit(index); } : undefined}
+                        disabled={!canEdit}
+                        className={`p-1 rounded ${canEdit ? 'text-slate-300 hover:text-white' : 'text-slate-500 opacity-60 cursor-not-allowed'}`}
+                        title={canEdit ? 'Bearbeiten' : 'Nur Lesender Zugriff'}
                       >
-                        {item.completed ? "Rückgängig" : "Erledigt"}
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor" aria-hidden>
+                          <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" />
+                        </svg>
                       </button>
+
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEdit(index);
-                        }}
-                        className="px-3 py-1 rounded-md text-sm bg-yellow-500 hover:bg-yellow-400"
+                        onClick={canEdit ? (e) => { e.stopPropagation(); handleDelete(index); } : undefined}
+                        disabled={!canEdit}
+                        className={`px-2 py-0.5 rounded text-xs ${canEdit ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-gray-600 text-slate-300 opacity-60 cursor-not-allowed'}`}
+                        title={canEdit ? 'Löschen' : 'Nur Lesender Zugriff'}
                       >
-                        Bearbeiten
-                      </button>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(index);
-                        }}
-                        className="px-3 py-1 rounded-md text-sm bg-red-600 hover:bg-red-500 text-white"
-                      >
-                        Löschen
+                        ✕
                       </button>
 
                       <button
@@ -1285,7 +1343,7 @@ export default function Dashboard({ user, onLogout }) {
                         className="px-2 py-1 rounded text-xs bg-indigo-600 text-white"
                         title="Als PDF herunterladen"
                       >
-                        📄 PDF
+                        📄
                       </button>
 
                       {weiterleitenIndex === index ? (
@@ -1294,6 +1352,7 @@ export default function Dashboard({ user, onLogout }) {
                             value={weiterleitenZiel}
                             onChange={(e) => setWeiterleitenZiel(e.target.value)}
                             className="bg-gray-700 text-xs p-1 rounded"
+                            disabled={!canEdit}
                           >
                             <option value="">Abteilung wählen</option>
                             {DEPARTMENTS.filter(
@@ -1305,11 +1364,9 @@ export default function Dashboard({ user, onLogout }) {
                             ))}
                           </select>
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleWeiterleiten(index);
-                            }}
-                            className="bg-blue-500 text-xs px-2 py-1 rounded"
+                            onClick={canEdit ? (e) => { e.stopPropagation(); handleWeiterleiten(index); } : undefined}
+                            disabled={!canEdit}
+                            className={`bg-blue-500 text-xs px-2 py-1 rounded ${!canEdit ? 'opacity-60 cursor-not-allowed' : ''}`}
                           >
                             OK
                           </button>
@@ -1325,11 +1382,9 @@ export default function Dashboard({ user, onLogout }) {
                         </div>
                       ) : (
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setWeiterleitenIndex(index);
-                          }}
-                          className="px-2 py-1 rounded text-xs bg-blue-600"
+                          onClick={canEdit ? (e) => { e.stopPropagation(); setWeiterleitenIndex(index); } : undefined}
+                          disabled={!canEdit}
+                          className={`px-2 py-1 rounded text-xs ${canEdit ? 'bg-blue-600' : 'bg-gray-600 text-slate-300 opacity-60 cursor-not-allowed'}`}
                         >
                           Weiterleiten
                         </button>
@@ -1348,6 +1403,7 @@ export default function Dashboard({ user, onLogout }) {
               <form
                 onSubmit={async (e) => {
                   e.preventDefault();
+                  if (!canEdit) return alert('Nur Lesezugriff: keine Schreibrechte.');
 
                   if (recForm.intervall === "once" && !recForm.dueDate) {
                     alert("Bitte Datum wählen (bei einmaligen Aufgaben).");
@@ -1541,7 +1597,7 @@ export default function Dashboard({ user, onLogout }) {
                 </div>
 
                 <div className="flex gap-2">
-                  <button type="submit" className="bg-green-600 px-4 py-2 rounded">
+                  <button type="submit" disabled={!canEdit} className={`${canEdit ? 'bg-green-600' : 'bg-gray-600 text-slate-300 opacity-60 cursor-not-allowed'} px-4 py-2 rounded`}>
                     {recForm.id ? "Änderungen speichern" : "Speichern"}
                   </button>
                   {recForm.id && (
@@ -1620,7 +1676,7 @@ export default function Dashboard({ user, onLogout }) {
                       </div>
                       <div className="flex gap-2">
                         <button
-                          onClick={() =>
+                          onClick={canEdit ? () =>
                             setRecForm({
                               id: t.id,
                               titel: t.titel || "",
@@ -1631,14 +1687,15 @@ export default function Dashboard({ user, onLogout }) {
                               anleitungUrl: t.anleitungUrl || "",
                               vorlaufMin: t.vorlaufMin ?? 0,
                               cooldownHours: t.cooldownHours ?? 0,
-                            })
+                            }) : undefined
                           }
-                          className="bg-yellow-600 text-xs px-2 py-1 rounded"
+                          disabled={!canEdit}
+                          className={`text-xs px-2 py-1 rounded ${canEdit ? 'bg-yellow-600' : 'bg-gray-600 text-slate-300 opacity-60 cursor-not-allowed'}`}
                         >
                           Bearbeiten
                         </button>
                         <button
-                          onClick={async () => {
+                          onClick={canEdit ? async () => {
                             if (!confirm("Recurring-Task löschen?")) return;
                             try {
                               const r = await fetch(
@@ -1652,8 +1709,9 @@ export default function Dashboard({ user, onLogout }) {
                             } catch (err) {
                               alert(err.message);
                             }
-                          }}
-                          className="bg-red-600 text-xs px-2 py-1 rounded"
+                          } : undefined}
+                          disabled={!canEdit}
+                          className={`text-xs px-2 py-1 rounded ${canEdit ? 'bg-red-600' : 'bg-gray-600 text-slate-300 opacity-60 cursor-not-allowed'}`}
                         >
                           Löschen
                         </button>
@@ -1668,6 +1726,8 @@ export default function Dashboard({ user, onLogout }) {
               </div>
             </div>
           )}
+
+          {/* Einteilung tab removed per user request */}
         </main>
       </div>
 

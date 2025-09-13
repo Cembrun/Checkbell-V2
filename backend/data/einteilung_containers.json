@@ -1,0 +1,135 @@
+{
+  "areas": [
+    {
+      "id": "a1757258011291",
+      "label": "UG ZG",
+      "members": [
+        "u1757428324445"
+      ],
+      "capacity": 1
+    },
+    {
+      "id": "a1757258202586",
+      "label": "EGZG",
+      "members": [
+        "u1757428087016"
+      ],
+      "capacity": 1
+    },
+    {
+      "id": "a1757428792956",
+      "label": "1.OG ZG2",
+      "members": [
+        "u1757428364088"
+      ],
+      "capacity": 1
+    },
+    {
+      "id": "a1757428473845",
+      "label": "UG",
+      "members": [
+        "u1757428172094"
+      ],
+      "capacity": 1
+    },
+    {
+      "id": "a1757258197355",
+      "label": "EG",
+      "members": [
+        "u1757428291760"
+      ],
+      "capacity": 1
+    },
+    {
+      "id": "a1757428777092",
+      "label": "1.OG",
+      "members": [
+        "u1757428209088",
+        "u1757428199780"
+      ],
+      "capacity": 2
+    },
+    {
+      "id": "a1757260296786",
+      "label": "Pause",
+      "members": [],
+      "capacity": null
+    }
+  ],
+  "employees": [
+    {
+      "id": "u1757428087016",
+      "name": "Mykhailo Petri",
+      "funk": "",
+      "assignCount": 10,
+      "lastAssignedAt": "2025-09-10T07:28:37.122Z"
+    },
+    {
+      "id": "u1757428172094",
+      "name": "Yakob Degol",
+      "funk": "",
+      "assignCount": 13,
+      "lastAssignedAt": "2025-09-10T07:28:37.122Z"
+    },
+    {
+      "id": "u1757428179027",
+      "name": "Yanick Frankhauser",
+      "funk": "",
+      "assignCount": 10,
+      "lastAssignedAt": "2025-09-09T19:13:53.136Z"
+    },
+    {
+      "id": "u1757428199780",
+      "name": "Aziz Pinarbasi",
+      "funk": "",
+      "assignCount": 10,
+      "lastAssignedAt": "2025-09-10T07:28:37.122Z"
+    },
+    {
+      "id": "u1757428209088",
+      "name": "Nino Paci",
+      "funk": "",
+      "assignCount": 13,
+      "lastAssignedAt": "2025-09-10T07:28:37.122Z"
+    },
+    {
+      "id": "u1757428291760",
+      "name": "Philip Hermann",
+      "funk": "",
+      "assignCount": 12,
+      "lastAssignedAt": "2025-09-10T07:28:37.122Z"
+    },
+    {
+      "id": "u1757428304789",
+      "name": "Saadi Jama",
+      "funk": "",
+      "assignCount": 13,
+      "lastAssignedAt": "2025-09-09T19:13:53.136Z"
+    },
+    {
+      "id": "u1757428324445",
+      "name": "Qendrim Elshani",
+      "funk": "",
+      "assignCount": 12,
+      "lastAssignedAt": "2025-09-10T07:28:37.122Z"
+    },
+    {
+      "id": "u1757428364088",
+      "name": "Granit Jusufi",
+      "funk": "",
+      "assignCount": 14,
+      "lastAssignedAt": "2025-09-10T07:28:37.122Z"
+    }
+  ],
+  "assignments": {
+    "u1757428324445": "a1757258011291",
+    "u1757428087016": "a1757258202586",
+    "u1757428364088": "a1757428792956",
+    "u1757428172094": "a1757428473845",
+    "u1757428291760": "a1757258197355",
+    "u1757428209088": "a1757428777092",
+    "u1757428199780": "a1757428777092"
+  },
+  "updatedAt": "2025-09-13T18:31:10.975Z",
+  "clientId": "cmfilqutexydr"
+}

@@ -70,7 +70,7 @@ export default function Login({ onLogin }) {
           {loading ? "Anmelden…" : "Anmelden"}
         </button>
 
-        {/* Kein Registrieren-Link mehr */}
+  {/* Kein 'Passwort vergessen' Link */}
       </form>
     </div>
   );

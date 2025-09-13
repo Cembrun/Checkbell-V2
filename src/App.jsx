@@ -1,6 +1,6 @@
 // src/App.jsx
 import { useEffect, useState } from "react";
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
 import { api, apiPost } from "./api";
 import AdminUsers from "./pages/AdminUsers.jsx";
 import Archive from "./pages/Archive.jsx";
@@ -66,54 +66,83 @@ export default function App() {
   }
 
   const navigate = useNavigate();
+  const location = useLocation();
+
   if (user) {
     return (
       <div className="relative min-h-screen">
         {errMe && (
-          <div className="fixed top-3 left-3 z-40 px-3 py-1.5 rounded bg-red-600 text-white text-sm shadow">
+          <div className="mb-2 px-3 py-1.5 rounded bg-red-600 text-white text-sm shadow">
             {errMe}
           </div>
         )}
         {infoMsg && (
-          <div className="fixed top-3 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded bg-green-600 text-white text-base shadow font-bold">
+          <div className="mb-2 px-4 py-2 rounded bg-green-600 text-white text-base shadow font-bold text-center">
             {infoMsg}
           </div>
         )}
 
-        {/* feste Top-Leiste: Archiv, Statistik, eingeloggter User, Admin */}
-        <div className="fixed top-3 right-3 z-40 flex items-center gap-2">
-          <button
-            onClick={() => setShowArchive(true)}
-            className="px-3 py-1 rounded-lg border bg-white hover:bg-gray-50 shadow-sm mr-2"
-            title="Archiv: erledigte Einträge"
-          >
-            Archiv
-          </button>
-          <button
-            onClick={() => navigate("/statistik")}
-            className="px-3 py-1 rounded-lg border bg-white hover:bg-gray-50 shadow-sm mr-2"
-            title="Statistik & KPIs"
-          >
-            Statistik
-          </button>
-          <span className="px-2 py-1 rounded-lg border bg-white/80 shadow-sm text-sm">
-            eingeloggt als <b>{me?.username || user.username}</b>
-          </span>
-          {me?.isAdmin && (
-            <button
-              onClick={() => setShowAdmin(true)}
-              className="px-3 py-1 rounded-lg border bg-white hover:bg-gray-50 shadow-sm"
-              title="Benutzerverwaltung"
-              disabled={loadingMe}
-            >
-              Admin
-            </button>
-          )}
+  {/* Header: brand left, actions right */}
+  <header className="relative w-full bg-blue-600 text-white shadow-sm">
+  <div className="w-full mx-auto flex items-center justify-between px-4 sm:px-6 py-3 pl-12">
+      <div className="flex items-center gap-3">
+        {/* simple brand: circle + text - clickable to return to dashboard */}
+        <div
+          className="absolute left-5 sm:left-6 top-1/2 transform -translate-y-1/2 flex items-center gap-3 cursor-pointer"
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate('/')}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') navigate('/'); }}
+          title="Zurück zum Dashboard"
+        >
+          <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center" aria-hidden>
+            {/* stylized bell with check mark */}
+            <svg className="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+              <path d="M12 3C10.343 3 9 4.343 9 6v1.07C6.163 8.213 4 11.012 4 14v2l-1 1v1h18v-1l-1-1v-2c0-2.988-2.163-5.787-5-5.93V6c0-1.657-1.343-3-3-3z" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round" fill="currentColor" fillOpacity="0.06" />
+              <path d="M9.5 17c.5.9 1.4 1.5 2.5 1.5s2-.6 2.5-1.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M9.5 11.5l1.5 1.5 3-3" stroke="#ffffff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div className="font-semibold text-lg leading-none">CheckBell</div>
         </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => setShowArchive(true)}
+          className="hidden sm:inline-block px-3 py-1 rounded-md bg-white/10 hover:bg-white/20"
+          title="Archiv: erledigte Einträge"
+        >
+          Archiv
+        </button>
+        <button
+          onClick={() => navigate("/statistik")}
+          className="hidden sm:inline-block px-3 py-1 rounded-md bg-white/10 hover:bg-white/20"
+          title="Statistik & KPIs"
+        >
+          Statistik
+        </button>
+        <span className="px-2 py-1 rounded-md bg-white/10 text-sm">
+          eingeloggt als <b className="ml-1">{me?.username || user.username}</b>
+        </span>
+  {(me?.role === 'admin' || me?.isAdmin) && (
+          <button
+            onClick={() => setShowAdmin(true)}
+            className="px-3 py-1 rounded-md bg-white/10 hover:bg-white/20"
+            title="Benutzerverwaltung"
+            disabled={loadingMe}
+          >
+            Admin
+          </button>
+        )}
+      </div>
+    </div>
+  </header>
 
         <Routes>
           <Route path="/" element={<Dashboard user={me || user} onLogout={handleLogout} />} />
           <Route path="/statistik" element={<Statistik />} />
+          {/* Einteilung feature fully removed */}
         </Routes>
 
         {showAdmin && me?.isAdmin && (
@@ -128,7 +157,7 @@ export default function App() {
           </div>
         )}
 
-        {showArchive && <Archive onClose={() => setShowArchive(false)} />}
+  {showArchive && <Archive onClose={() => setShowArchive(false)} user={me} />}
       </div>
     );
   }

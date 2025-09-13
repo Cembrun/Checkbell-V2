@@ -1,0 +1,16 @@
+[
+  {
+    "id": "mf9tqos41kxxxn",
+    "instanceId": "rec_mf9tqngv1yds7i_2025-09-07",
+    "templateId": "mf9tqngv1yds7i",
+    "titel": "Test Technik täglich Kühlgeräte prüfen",
+    "beschreibung": "",
+    "quelleAbteilung": "Technik",
+    "dueDate": "2025-09-07 07:00",
+    "createdAt": "2025-09-07T15:04:54.770Z",
+    "completedAt": "2025-09-07T15:04:59.935Z",
+    "erledigtVon": "admin",
+    "archivedAt": "2025-09-07T15:04:59.937Z",
+    "dayKey": "2025-09-07"
+  }
+]

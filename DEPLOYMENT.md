@@ -14,6 +14,8 @@ Recommended quick setup (Vercel frontend + Render backend):
   - `SESSION_SECRET` (strong random string)
   - `FRONTEND_URLS` or `FRONTEND_URL` = `https://<your-frontend-url>`
   - (optional) `ADMIN_DEFAULT_PASSWORD`
+  - `TRUST_PROXY=1` if running behind a reverse-proxy (enables secure cookie handling)
+  - Note: In production `SESSION_SECRET` is mandatory. The server will refuse to start without it.
 - Add a Persistent Disk and mount it to `/app/data` and `/app/uploads` (so JSON files and uploads persist)
 
 3) Local Docker (alternative)
@@ -27,3 +29,5 @@ Recommended quick setup (Vercel frontend + Render backend):
 Notes:
 - For production readiness consider moving JSON files to a proper DB or S3 for uploads.
 - Keep `SESSION_SECRET` secret and rotate if leaked.
+ - Do NOT commit `backend/users.json` into public repositories. Create admin users manually in production and rotate any default passwords.
+ - The server will ignore the `x-user` header in production; use proper auth sessions.

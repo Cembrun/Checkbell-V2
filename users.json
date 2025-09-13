@@ -1,36 +1,119 @@
 [
   {
-    "username": "Cem",
-    "password": "$2b$10$D1W0ISkk5T3cWX0psUTatumCDYmSqoTq6DfEhKOqzWwks5LoSkvZa",
-    "isAdmin": false,
-    "mustChangePassword": true
-  },
-  {
-    "username": "admin",
-    "password": "$2b$10$F7DETQx29ZfuztGZCH8ijOZQSYPq9jNrAKCRt/QosDPMx1uEqyMYK",
-    "isAdmin": true,
-    "createdAt": "2025-08-18T20:39:27.548Z",
-    "mustChangePassword": false
-  },
-  {
-    "username": "Jakop",
-    "password": "$2b$10$IKqQ4y2c6lC3t8ZVI2oohe/9ZoIUm1nvBZgPT55PyxuUL83B/gbC2",
-    "isAdmin": false,
-    "createdAt": "2025-08-19T18:57:49.114Z",
-    "mustChangePassword": false
-  },
-  {
-    "username": "Cem1",
-    "password": "$2b$10$jFjXrp87fF4OirZ5Z/9kZegi4rKxHbF3Yt5BLgl.j3D4tD8hu7zXq",
-    "isAdmin": true,
-    "mustChangePassword": true,
-    "createdAt": "2025-08-20T17:47:03.550Z"
-  },
-  {
-    "username": "Admin1",
-    "password": "$2b$10$YV2/VR99uKzrKYh8nTG3fe//ZtY0EcIyCnK0H/yEND5vpKnlze906",
+    "username": "Laura",
+    "password": "$2b$10$hKtMERisi4c1HDfDd/fHbukFGFRRHZZOgchyHF9B1hpNfJDyG18/G",
     "isAdmin": true,
     "mustChangePassword": false,
-    "createdAt": "2025-08-20T18:00:00.000Z"
+    "createdAt": "2025-08-19T21:35:26.116Z",
+    "preferences": {
+      "meldungen:Leitstand": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      }
+    }
+  },
+  {
+    "username": "Cem",
+    "password": "$2b$10$hrDbZ50iYC61JchRPdZ8YeUJUY0CIdxDgl/BRulpRX5dYTBzlje76",
+    "isAdmin": true,
+    "mustChangePassword": true,
+    "createdAt": "2025-09-04T20:31:47.166Z",
+    "preferences": {
+      "tasks:Technik": {
+        "status": "offen",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "tasks:Leitstand": {
+        "status": "offen",
+        "kategorie": "alle",
+        "date": "last7",
+        "sort": "desc"
+      },
+      "tasks:Qualität": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "tasks:Logistik": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "meldungen:Leitstand": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "meldungen:Logistik": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "meldungen:Qualität": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "meldungen:Technik": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      }
+    }
+  },
+  {
+    "username": "123",
+    "password": "$2b$10$GbJxdTWe4iQ24QkpCcTZlezjRq3g016aCq6kx6BCBIqgV9vyJD2Oe",
+    "isAdmin": false,
+    "mustChangePassword": true,
+    "createdAt": "2025-09-06T10:11:18.472Z",
+    "preferences": {
+      "meldungen:Technik": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "tasks:Technik": {
+        "status": "offen",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "tasks:Qualität": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "meldungen:Leitstand": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "tasks:Logistik": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "tasks:Leitstand": {
+        "status": "offen",
+        "kategorie": "alle",
+        "date": "today",
+        "sort": "desc"
+      }
+    }
   }
 ]

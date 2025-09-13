@@ -1,0 +1,68 @@
+{
+  "areas": [
+    {
+      "id": "UG_UGZG",
+      "label": "UG/UGZG",
+      "fixed": true,
+      "members": []
+    },
+    {
+      "id": "EG7_EGZG",
+      "label": "EG7EGZG",
+      "fixed": true,
+      "members": []
+    },
+    {
+      "id": "1OG",
+      "label": "1.OG",
+      "fixed": true,
+      "members": []
+    },
+    {
+      "id": "1OG_ZG2",
+      "label": "1.OG ZG2",
+      "fixed": true,
+      "members": [
+        "u1757153379537"
+      ]
+    },
+    {
+      "id": "2OG",
+      "label": "2.OG",
+      "fixed": true,
+      "members": []
+    }
+  ],
+  "assignments": {
+    "u1757153379537": "1OG_ZG2"
+  },
+  "employees": [
+    {
+      "id": "u1757153379537",
+      "name": "Cem",
+      "funk": "AB1"
+    },
+    {
+      "id": "u1757153746716",
+      "name": "Beni",
+      "funk": ""
+    },
+    {
+      "id": "u1757153751517",
+      "name": "Marc",
+      "funk": ""
+    },
+    {
+      "id": "u1757153755841",
+      "name": "Domenico",
+      "funk": ""
+    },
+    {
+      "id": "u1757153762541",
+      "name": "Christoph",
+      "funk": ""
+    }
+  ],
+  "notes": [],
+  "updatedAt": "2025-09-06T10:51:47.761Z"
+}

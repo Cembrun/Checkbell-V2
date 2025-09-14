@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "vite",
+  "start:render": "node backend/server.js",
     "dev": "vite",
     "dev:client": "vite",
     "server": "node backend/server.js",

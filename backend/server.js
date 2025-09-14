@@ -1661,8 +1661,16 @@ io.on('connection', (socket) => {
 // (like Render) can detect the open port. Some platforms provide PORT but do
 // not set NODE_ENV=production, so prefer 0.0.0.0 when a PORT is present or when
 // NODE_ENV=production. Fall back to localhost for local dev.
-const preferPublicBind = Boolean(process.env.PORT) || process.env.NODE_ENV === 'production' || !!process.env.RENDER || !!process.env.RENDER_REGION;
-const HOST = process.env.HOST || (preferPublicBind ? '0.0.0.0' : '127.0.0.1');
+// If a platform provides PORT we must bind to 0.0.0.0 so the port is reachable.
+// Some platforms erroneously set HOST=127.0.0.1; explicitly ignore that when
+// PORT is present to ensure external routing works.
+const preferPublicBind = process.env.PORT || process.env.NODE_ENV === 'production' || !!process.env.RENDER || !!process.env.RENDER_REGION;
+let HOST;
+if (process.env.PORT) {
+  HOST = '0.0.0.0';
+} else {
+  HOST = process.env.HOST || (preferPublicBind ? '0.0.0.0' : '127.0.0.1');
+}
 
 httpServer.listen(PORT, HOST, () => {
   console.log(`✅ Server läuft auf http://${HOST}:${PORT}`);

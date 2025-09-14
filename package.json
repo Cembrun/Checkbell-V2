@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "start": "vite",
+  "start": "node scripts/render-start.js",
   "start:render": "node backend/server.js",
     "dev": "vite",
     "dev:client": "vite",

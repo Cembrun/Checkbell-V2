@@ -342,5 +342,27 @@
     "templateId": "mf9tqngv1yds7i",
     "notizen": [],
     "anhaenge": []
+  },
+  {
+    "id": "mfjc1u44zhzkzj",
+    "instanceId": "rec_mf9tqngv1yds7i_2025-09-14",
+    "erstelltAm": "14.9.2025, 08:47:23",
+    "createdAt": "2025-09-14T06:47:23.571Z",
+    "titel": "Test Technik täglich Kühlgeräte prüfen",
+    "beschreibung": "",
+    "kategorie": "Betrieb",
+    "priorität": "mittel",
+    "status": "offen",
+    "quelleAbteilung": "Technik",
+    "zielAbteilung": null,
+    "completed": false,
+    "completedAt": null,
+    "erledigtVon": null,
+    "anleitungUrl": null,
+    "dueDate": "2025-09-14 07:00",
+    "fromRecurring": true,
+    "templateId": "mf9tqngv1yds7i",
+    "notizen": [],
+    "anhaenge": []
   }
 ]

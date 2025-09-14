@@ -17,14 +17,23 @@ const USERS_FILE = "./users.json";
 const DATA_DIR = "./data";
 const UPLOAD_DIR = "./uploads";
 const ARCHIVE_SUFFIX = "_archive.json"; // z.B. Technik_archive.json
-const CLIENT_ORIGINS = [
-  process.env.CLIENT_ORIGIN || "http://localhost:5173",
+// Allowed client origins. Prefer explicit comma-separated env `CLIENT_ORIGINS`,
+// fallback to single `CLIENT_ORIGIN`, otherwise use sensible defaults.
+const envOrigins = (process.env.CLIENT_ORIGINS || process.env.CLIENT_ORIGIN || "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const DEFAULT_ORIGINS = [
+  "http://localhost:5173",
   "http://localhost:5174",
   "https://checkbellapp.vercel.app",
   "https://checkbellapp.vercel.app/",
-  // User-provided Vercel deployment URL
+  // Historical Vercel preview URL kept for compatibility
   "https://check-bell-ckjz-h5o7jkvrd-cems-projects-97dfc7fd.vercel.app",
 ];
+
+const CLIENT_ORIGINS = Array.from(new Set([...envOrigins, ...DEFAULT_ORIGINS]));
 
 // Basic security headers (minimal, no extra dependency)
 app.use((req, res, next) => {
@@ -106,9 +115,11 @@ app.use(
   "/uploads",
   express.static(UPLOAD_DIR, {
     setHeaders: (res) => {
-      // Do not allow wildcard origin here; prefer explicit frontend origin from env
-      if (process.env.CLIENT_ORIGIN) {
-        res.setHeader("Access-Control-Allow-Origin", process.env.CLIENT_ORIGIN);
+      // Do not allow wildcard origin here; prefer explicit frontend origin from env.
+      // Use process.env.CLIENT_ORIGIN if provided, otherwise the first envOrigins entry.
+      const preferred = process.env.CLIENT_ORIGIN || envOrigins[0];
+      if (preferred) {
+        res.setHeader("Access-Control-Allow-Origin", preferred);
       }
       res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
     },

@@ -10,17 +10,34 @@ services:
   instanceCount: 1
   healthCheckPath: /api/health
   healthCheckIntervalSeconds: 10
-    disks:
-      - name: data
-        mountPath: /app/data
-        sizeGb: 5
-      - name: uploads
-        mountPath: /app/uploads
-        sizeGb: 5
-    envVars:
-      - key: NODE_ENV
-        value: production
-      - key: SESSION_SECRET
-        value: "<SET_IN_RENDER_DASHBOARD>"
-      - key: FRONTEND_URLS
-        value: "<SET_IN_RENDER_DASHBOARD>"
+  disks:
+    - name: data
+      mountPath: /app/data
+      sizeGb: 5
+    - name: uploads
+      mountPath: /app/uploads
+      sizeGb: 5
+  envVars:
+    - key: NODE_ENV
+      value: production
+    - key: SESSION_SECRET
+      value: "<SET_IN_RENDER_DASHBOARD>"
+    - key: CLIENT_ORIGIN
+      value: "<YOUR_FRONTEND_URL_OR_COMMA_SEPARATED_LIST>"
+    - key: TRUST_PROXY
+      value: "1"
+
+  # Alternative (if you prefer Render Node environment instead of Docker):
+  # Uncomment or import this as a separate service and remove the docker block above.
+  # - type: web
+  #   name: checkbell-backend-node
+  #   env: node
+  #   branch: main
+  #   buildCommand: "npm install && npm run build"
+  #   startCommand: "npm run start:render"
+  #   autoDeploy: true
+  #   plan: free
+  #   instanceType: starter
+  #   instanceCount: 1
+  #   healthCheckPath: /api/health
+  #   healthCheckIntervalSeconds: 10

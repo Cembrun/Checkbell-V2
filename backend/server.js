@@ -10,7 +10,8 @@ import crypto from "crypto";
 import session from "express-session";
 
 const app = express();
-const PORT = 4000;
+// Use Render/Platform provided PORT when available, otherwise default to 4000
+const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
 const USERS_FILE = "./users.json";
 const DATA_DIR = "./data";
@@ -1645,8 +1646,9 @@ io.on('connection', (socket) => {
   });
 });
 
-// Bind explicitly to 127.0.0.1 to ensure IPv4 loopback binding on Windows
-const HOST = process.env.HOST || '127.0.0.1';
+// Bind to 0.0.0.0 in production/container environments so external platforms
+// (like Render) can detect the open port. For local dev we keep 127.0.0.1.
+const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
 httpServer.listen(PORT, HOST, () => {
   console.log(`✅ Server läuft auf http://${HOST}:${PORT}`);
 });

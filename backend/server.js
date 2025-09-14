@@ -1657,9 +1657,13 @@ io.on('connection', (socket) => {
   });
 });
 
-// Bind to 0.0.0.0 in production/container environments so external platforms
-// (like Render) can detect the open port. For local dev we keep 127.0.0.1.
-const HOST = process.env.HOST || (process.env.NODE_ENV === 'production' ? '0.0.0.0' : '127.0.0.1');
+// Bind to 0.0.0.0 in container/platform environments so external platforms
+// (like Render) can detect the open port. Some platforms provide PORT but do
+// not set NODE_ENV=production, so prefer 0.0.0.0 when a PORT is present or when
+// NODE_ENV=production. Fall back to localhost for local dev.
+const preferPublicBind = Boolean(process.env.PORT) || process.env.NODE_ENV === 'production' || !!process.env.RENDER || !!process.env.RENDER_REGION;
+const HOST = process.env.HOST || (preferPublicBind ? '0.0.0.0' : '127.0.0.1');
+
 httpServer.listen(PORT, HOST, () => {
   console.log(`✅ Server läuft auf http://${HOST}:${PORT}`);
 });

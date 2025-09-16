@@ -37,6 +37,11 @@ const DEFAULT_ORIGINS = [
 
 const CLIENT_ORIGINS = Array.from(new Set([...envOrigins, ...DEFAULT_ORIGINS]));
 
+// Debug: Log allowed origins in development
+if (process.env.NODE_ENV !== 'production') {
+  console.log('Allowed CORS origins:', CLIENT_ORIGINS);
+}
+
 // Basic security headers (minimal, no extra dependency)
 app.use((req, res, next) => {
   res.setHeader("X-Frame-Options", "DENY");
@@ -1568,8 +1573,22 @@ import { Server as IOServer } from 'socket.io';
 const httpServer = http.createServer(app);
 const io = new IOServer(httpServer, {
   cors: {
-    // Use CLIENT_ORIGINS for consistency with Express CORS
-    origin: CLIENT_ORIGINS,
+    // Use same CORS logic as Express
+    origin: function (origin, callback) {
+      // Preflight/Server-zu-Server ohne Origin erlauben
+      if (!origin) return callback(null, true);
+      // In development allow localhost with any port (Vite may pick 75/5173/etc.)
+      if (process.env.NODE_ENV !== 'production') {
+        try {
+          const u = new URL(origin);
+          if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return callback(null, true);
+        } catch (e) {
+          // ignore URL parse errors
+        }
+      }
+      if (CLIENT_ORIGINS.includes(origin)) return callback(null, true);
+      return callback(null, false);
+    },
     methods: ['GET', 'POST'],
     credentials: true,
   },

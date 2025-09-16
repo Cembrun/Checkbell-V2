@@ -31,15 +31,20 @@ const DEFAULT_ORIGINS = [
   "https://checkbellapp.vercel.app/",
   "https://checkbell-v2.vercel.app",
   "https://checkbell-v2.vercel.app/",
+  // Add common Vercel preview patterns
+  /^https:\/\/checkbell-v2-.*\.vercel\.app$/,
+  /^https:\/\/check-bell-.*\.vercel\.app$/,
   // Historical Vercel preview URL kept for compatibility
   "https://check-bell-ckjz-h5o7jkvrd-cems-projects-97dfc7fd.vercel.app",
 ];
 
-const CLIENT_ORIGINS = Array.from(new Set([...envOrigins, ...DEFAULT_ORIGINS]));
+const CLIENT_ORIGINS = Array.from(new Set([...envOrigins, ...DEFAULT_ORIGINS.filter(o => typeof o === 'string')]));
+const CLIENT_ORIGIN_PATTERNS = DEFAULT_ORIGINS.filter(o => typeof o !== 'string');
 
 // Debug: Log allowed origins in development
 if (process.env.NODE_ENV !== 'production') {
   console.log('Allowed CORS origins:', CLIENT_ORIGINS);
+  console.log('Allowed CORS patterns:', CLIENT_ORIGIN_PATTERNS);
 }
 
 // Basic security headers (minimal, no extra dependency)
@@ -88,12 +93,17 @@ app.use(
           // ignore URL parse errors
         }
       }
+      // Check exact matches
       if (CLIENT_ORIGINS.includes(origin)) return cb(null, true);
+      // Check patterns
+      for (const pattern of CLIENT_ORIGIN_PATTERNS) {
+        if (pattern.test && pattern.test(origin)) return cb(null, true);
+      }
       return cb(null, false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "x-user"],
+    allowedHeaders: ["Content-Type", "x-user", "Authorization"],
     exposedHeaders: ["Content-Disposition"],
   })
 );
@@ -1586,7 +1596,12 @@ const io = new IOServer(httpServer, {
           // ignore URL parse errors
         }
       }
+      // Check exact matches
       if (CLIENT_ORIGINS.includes(origin)) return callback(null, true);
+      // Check patterns
+      for (const pattern of CLIENT_ORIGIN_PATTERNS) {
+        if (pattern.test && pattern.test(origin)) return callback(null, true);
+      }
       return callback(null, false);
     },
     methods: ['GET', 'POST'],

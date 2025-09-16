@@ -22,7 +22,7 @@ services:
       value: production
     - key: SESSION_SECRET
       value: "<SET_IN_RENDER_DASHBOARD>"
-    - key: CLIENT_ORIGIN
+    - key: CLIENT_ORIGINS
       value: "<YOUR_FRONTEND_URL_OR_COMMA_SEPARATED_LIST>"
     - key: TRUST_PROXY
       value: "1"

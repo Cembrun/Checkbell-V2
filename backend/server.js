@@ -57,41 +57,39 @@ ensureDir(UPLOAD_DIR);
 // ----- CORS / JSON / Sessions -----
 app.use(
   cors({
-    origin(origin, cb) {
-      // Preflight/Server-zu-Server ohne Origin erlauben
-      if (!origin) return cb(null, true);
-      // In development allow localhost with any port (Vite may pick 75/5173/etc.)
+    origin: function (origin, callback) {
+      // Allow requests with no origin (server-to-server, mobile apps, etc.)
+      if (!origin) return callback(null, true);
+
+      // Allow all Vercel domains
+      if (origin && origin.includes('vercel.app')) {
+        return callback(null, true);
+      }
+
+      // Allow localhost in development
       if (process.env.NODE_ENV !== 'production') {
         try {
-          const u = new URL(origin);
-          if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return cb(null, true);
+          const url = new URL(origin);
+          if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+            return callback(null, true);
+          }
         } catch (e) {
           // ignore URL parse errors
         }
       }
 
-      // Allow specific Vercel domains
-      const allowedOrigins = [
-        'https://checkbellapp.vercel.app',
-        'https://checkbellapp.vercel.app/',
-        'https://checkbell-v2.vercel.app',
-        'https://checkbell-v2.vercel.app/',
-        'https://checkbell-v2-git-main-cems-projects-97dfc7fd.vercel.app'
-      ];
-
-      if (allowedOrigins.includes(origin)) {
-        return cb(null, true);
+      // For production, be more restrictive
+      if (process.env.NODE_ENV === 'production') {
+        const allowedProdOrigins = [
+          'https://checkbell-v2.vercel.app',
+          'https://checkbellapp.vercel.app'
+        ];
+        if (allowedProdOrigins.includes(origin)) {
+          return callback(null, true);
+        }
       }
 
-      // Allow Vercel preview deployments
-      if (origin && (
-        origin.startsWith('https://checkbell-v2-') && origin.endsWith('.vercel.app') ||
-        origin.startsWith('https://check-bell-') && origin.endsWith('.vercel.app')
-      )) {
-        return cb(null, true);
-      }
-
-      return cb(null, false);
+      return callback(null, false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
@@ -1576,8 +1574,13 @@ const httpServer = http.createServer(app);
 const io = new IOServer(httpServer, {
   cors: {
     origin: function (origin, callback) {
-      // Allow requests with no origin (server-to-server)
+      // Allow requests with no origin
       if (!origin) return callback(null, true);
+
+      // Allow all Vercel domains
+      if (origin && origin.includes('vercel.app')) {
+        return callback(null, true);
+      }
 
       // Allow localhost in development
       if (process.env.NODE_ENV !== 'production') {
@@ -1591,28 +1594,7 @@ const io = new IOServer(httpServer, {
         }
       }
 
-      // Allow specific Vercel domains
-      const allowedOrigins = [
-        'https://checkbellapp.vercel.app',
-        'https://checkbellapp.vercel.app/',
-        'https://checkbell-v2.vercel.app',
-        'https://checkbell-v2.vercel.app/',
-        'https://checkbell-v2-git-main-cems-projects-97dfc7fd.vercel.app'
-      ];
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      // Allow Vercel preview deployments
-      if (origin && (
-        origin.startsWith('https://checkbell-v2-') && origin.endsWith('.vercel.app') ||
-        origin.startsWith('https://check-bell-') && origin.endsWith('.vercel.app')
-      )) {
-        return callback(null, true);
-      }
-
-      return callback(new Error('Not allowed by CORS'));
+      return callback(null, false);
     },
     methods: ['GET', 'POST'],
     credentials: true,

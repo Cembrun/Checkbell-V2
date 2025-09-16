@@ -5,11 +5,31 @@
     "isAdmin": true,
     "mustChangePassword": true,
     "createdAt": "2025-08-19T21:35:26.116Z",
-    "role": "admin"
+    "role": "admin",
+    "preferences": {
+      "meldungen:Leitstand": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "einteilung:Leitstand": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "tasks:Leitstand": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      }
+    }
   },
   {
     "username": "admin",
-    "password": "$2b$10$OJxdyRMhKDcM/Vjl8JhJruHPaZz9thB6PuWLp7MeW.28jAsu0QeQG",
+    "password": "$2b$10$sKlhVpl6qyRCtpxP69kQZebCFjIYmjvKmyY1PPkhSppyFYYc1EfNu",
     "isAdmin": true,
     "mustChangePassword": true,
     "createdAt": "2025-09-04T22:12:41.595Z",

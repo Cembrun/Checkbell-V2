@@ -60,7 +60,8 @@ export default function EinteilungAnlagenbetreuer() {
     if (emitTimer.current) clearTimeout(emitTimer.current);
     emitTimer.current = setTimeout(() => {
       try {
-        if (socket && socket.connected) socket.emit('assignment:update', { nodes, edges });
+        // Socket.IO temporarily disabled - no realtime updates
+        console.log('[EinteilungAnlagenbetreuer] Socket disabled - skipping realtime update');
         localStorage.setItem('einteilung:nodes', JSON.stringify(nodes));
         localStorage.setItem('einteilung:edges', JSON.stringify(edges));
         // debounced server-side persist
@@ -168,23 +169,12 @@ export default function EinteilungAnlagenbetreuer() {
 
   const navigate = useNavigate();
 
-  // socket.io client for basic real-time sync
+  // socket.io client for basic real-time sync - TEMPORARILY DISABLED
   useEffect(() => {
-    if (!socket) return;
-    const onAssign = (payload) => {
-      try {
-        if (payload?.nodes) setNodes((payload.nodes || []).map((n) => ({ ...n, type: 'resizable', data: { ...(n.data || {}), onUpdate: (patch) => applyStyleToNode(n.id, patch) } })));
-        if (payload?.edges) setEdges(payload.edges);
-      } catch (e) {}
-    };
-    socket.on('assignment:updated', onAssign);
-    // ensure we join the canonical room used by the container UI
-    if (socket.connected) socket.emit('joinRoom', 'einteilung:containers');
-    else socket.on('connect', () => socket.emit('joinRoom', 'einteilung:containers'));
-    return () => {
-      socket.off('assignment:updated', onAssign);
-    };
-  }, [setNodes, setEdges, socket]);
+    // Socket.IO is temporarily disabled to prevent errors
+    console.log('[EinteilungAnlagenbetreuer] Socket.IO disabled - no realtime sync');
+    return () => {};
+  }, []);
 
   const onConnect = useCallback((params) => setEdges((eds) => addEdge(params, eds)), [setEdges]);
 
@@ -323,7 +313,8 @@ export default function EinteilungAnlagenbetreuer() {
     try {
       localStorage.setItem('einteilung:nodes', JSON.stringify(nodes));
       localStorage.setItem('einteilung:edges', JSON.stringify(edges));
-      if (socket && socket.connected) socket.emit('assignment:update', { room: 'einteilung', nodes, edges });
+      // Socket.IO temporarily disabled - no realtime updates
+      console.log('[EinteilungAnlagenbetreuer] Socket disabled - skipping realtime update');
       // Persist server-side as well (if logged in)
       try {
         const backendUrl = (typeof import.meta !== "undefined" &&
@@ -350,7 +341,8 @@ export default function EinteilungAnlagenbetreuer() {
     setEdges(initialEdges);
     localStorage.removeItem('einteilung:nodes');
     localStorage.removeItem('einteilung:edges');
-    if (socket && socket.connected) socket.emit('assignment:update', { nodes: initialNodes, edges: initialEdges });
+    // Socket.IO temporarily disabled - no realtime updates
+    console.log('[EinteilungAnlagenbetreuer] Socket disabled - skipping realtime update');
   };
 
   return (

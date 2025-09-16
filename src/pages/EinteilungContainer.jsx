@@ -129,14 +129,8 @@ export default function EinteilungContainer({ inline = false, onClose, user } = 
   // Emit an update to other clients via socket and optionally include clientId and timestamp
   const broadcastUpdate = async (payload) => {
     const stamped = { ...(payload || {}), updatedAt: new Date().toISOString(), clientId };
-    // emit via socket for realtime
-    try {
-      if (socket && socket.connected) {
-        socket.emit('assignment:update', stamped);
-      }
-    } catch (e) {
-      // ignore
-    }
+    // Socket.IO temporarily disabled - no realtime updates
+    console.log('[EinteilungContainer] Socket disabled - skipping realtime broadcast');
   };
 
   const handleSaveClick = async () => {
@@ -337,31 +331,11 @@ export default function EinteilungContainer({ inline = false, onClose, user } = 
   autoSave();
   };
 
-    // Listen for realtime updates from other clients
+    // Listen for realtime updates from other clients - TEMPORARILY DISABLED
     useEffect(() => {
-      if (!socket) return;
-      const onRemote = (payload) => {
-        try {
-          if (!payload) return;
-          // ignore if from this client
-          if (payload.clientId && payload.clientId === clientId) return;
-          const incomingTs = payload.updatedAt ? Date.parse(payload.updatedAt) : Date.now();
-          const lastTs = lastRemoteUpdateAt ? Date.parse(lastRemoteUpdateAt) : 0;
-          if (Number.isFinite(incomingTs) && incomingTs <= lastTs) return;
-          // apply areas/assignments/employees if present
-          if (Array.isArray(payload.areas)) setAreas(payload.areas.map(a => ({ ...a, members: Array.isArray(a.members) ? a.members : [] })));
-          if (payload.assignments) setAssignments(payload.assignments);
-          if (Array.isArray(payload.employees)) setEmployees(payload.employees);
-          // persist the canonical state from other clients/server
-          try { localStorage.setItem('einteilung:containers', JSON.stringify({ areas: payload.areas || [], assignments: payload.assignments || {}, employees: payload.employees || [], updatedAt: payload.updatedAt || new Date().toISOString() })); } catch (e) {}
-          setLastRemoteUpdateAt(new Date().toISOString());
-        } catch (e) {
-          // ignore
-        }
-      };
-
-      socket.on('assignment:updated', onRemote);
-      return () => socket.off('assignment:updated', onRemote);
+      // Socket.IO is temporarily disabled to prevent errors
+      console.log('[EinteilungContainer] Socket.IO disabled - no realtime sync');
+      return () => {};
     }, [socket, clientId, lastRemoteUpdateAt]);
 
     // Auto-refresh from server every 3 minutes to keep the UI in sync

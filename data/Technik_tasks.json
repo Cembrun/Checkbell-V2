@@ -130,5 +130,27 @@
     "templateId": "mf5v9kgu778aj2",
     "notizen": [],
     "anhaenge": []
+  },
+  {
+    "id": "mfk5f66zcq1w4q",
+    "instanceId": "rec_mf5v9kgu778aj2_2025-09-14",
+    "erstelltAm": "14.9.2025, 22:29:34",
+    "createdAt": "2025-09-14T20:29:34.619Z",
+    "titel": "test technik aufgabe wiederkehrend ",
+    "beschreibung": "",
+    "kategorie": "Betrieb",
+    "priorität": "mittel",
+    "status": "offen",
+    "quelleAbteilung": "Technik",
+    "zielAbteilung": null,
+    "completed": false,
+    "completedAt": null,
+    "erledigtVon": null,
+    "anleitungUrl": "/uploads/1757018190542_CheckBell_3.png",
+    "dueDate": "2025-09-14 07:00",
+    "fromRecurring": true,
+    "templateId": "mf5v9kgu778aj2",
+    "notizen": [],
+    "anhaenge": []
   }
 ]

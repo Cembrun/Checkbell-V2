@@ -104,7 +104,7 @@ app.use(
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      sameSite: process.env.COOKIE_SAMESITE || "lax",
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       // in production ensure secure cookies
       secure: process.env.NODE_ENV === 'production',
       maxAge: 1000 * 60 * 60 * 8, // 8h

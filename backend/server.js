@@ -56,18 +56,29 @@ ensureDir(UPLOAD_DIR);
 
 // ----- CORS / JSON / Sessions -----
 app.use((req, res, next) => {
-  // Very permissive CORS for debugging
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
-  res.header('Access-Control-Allow-Headers', '*');
+  // Ultra-permissive CORS for debugging
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-user, Cache-Control, Pragma');
   res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Max-Age', '86400'); // 24 hours
 
   // Handle preflight requests
   if (req.method === 'OPTIONS') {
-    res.sendStatus(200);
-  } else {
-    next();
+    res.status(200).end();
+    return;
   }
+
+  next();
+});
+
+// Additional global CORS handler for all routes
+app.options('*', (req, res) => {
+  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-user, Cache-Control, Pragma');
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.status(200).end();
 });
 
 // JSON-Parser
@@ -1545,11 +1556,13 @@ import { Server as IOServer } from 'socket.io';
 const httpServer = http.createServer(app);
 const io = new IOServer(httpServer, {
   cors: {
-    origin: "*", // Erlaube alle Origins
-    methods: ["GET", "POST"],
+    origin: true, // Allow all origins
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
     credentials: true,
-    allowedHeaders: ["*"]
+    allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization", "x-user"]
   },
+  allowEIO3: true, // Allow Engine.IO v3 clients
+  transports: ['websocket', 'polling']
 });
 
 // In-memory guard to avoid broadcasting outdated or duplicate container updates

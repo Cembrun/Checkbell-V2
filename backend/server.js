@@ -57,40 +57,7 @@ ensureDir(UPLOAD_DIR);
 // ----- CORS / JSON / Sessions -----
 app.use(
   cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (server-to-server, mobile apps, etc.)
-      if (!origin) return callback(null, true);
-
-      // Allow all Vercel domains
-      if (origin && origin.includes('vercel.app')) {
-        return callback(null, true);
-      }
-
-      // Allow localhost in development
-      if (process.env.NODE_ENV !== 'production') {
-        try {
-          const url = new URL(origin);
-          if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-            return callback(null, true);
-          }
-        } catch (e) {
-          // ignore URL parse errors
-        }
-      }
-
-      // For production, be more restrictive
-      if (process.env.NODE_ENV === 'production') {
-        const allowedProdOrigins = [
-          'https://checkbell-v2.vercel.app',
-          'https://checkbellapp.vercel.app'
-        ];
-        if (allowedProdOrigins.includes(origin)) {
-          return callback(null, true);
-        }
-      }
-
-      return callback(null, false);
-    },
+    origin: true, // Temporär alle Origins erlauben für Debugging
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "x-user", "Authorization"],
@@ -1573,29 +1540,7 @@ import { Server as IOServer } from 'socket.io';
 const httpServer = http.createServer(app);
 const io = new IOServer(httpServer, {
   cors: {
-    origin: function (origin, callback) {
-      // Allow requests with no origin
-      if (!origin) return callback(null, true);
-
-      // Allow all Vercel domains
-      if (origin && origin.includes('vercel.app')) {
-        return callback(null, true);
-      }
-
-      // Allow localhost in development
-      if (process.env.NODE_ENV !== 'production') {
-        try {
-          const url = new URL(origin);
-          if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-            return callback(null, true);
-          }
-        } catch (e) {
-          // ignore URL parse errors
-        }
-      }
-
-      return callback(null, false);
-    },
+    origin: true, // Temporär alle Origins erlauben für Debugging
     methods: ['GET', 'POST'],
     credentials: true,
     allowedHeaders: ['*']

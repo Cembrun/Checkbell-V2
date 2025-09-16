@@ -55,15 +55,20 @@ ensureDir(DATA_DIR);
 ensureDir(UPLOAD_DIR);
 
 // ----- CORS / JSON / Sessions -----
-app.use(
-  cors({
-    origin: true, // Temporär alle Origins erlauben für Debugging
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "x-user", "Authorization"],
-    exposedHeaders: ["Content-Disposition"],
-  })
-);
+app.use((req, res, next) => {
+  // Very permissive CORS for debugging
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Allow-Credentials', 'true');
+
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
 
 // JSON-Parser
 app.use(bodyParser.json());
@@ -1540,10 +1545,10 @@ import { Server as IOServer } from 'socket.io';
 const httpServer = http.createServer(app);
 const io = new IOServer(httpServer, {
   cors: {
-    origin: true, // Temporär alle Origins erlauben für Debugging
-    methods: ['GET', 'POST'],
+    origin: "*", // Erlaube alle Origins
+    methods: ["GET", "POST"],
     credentials: true,
-    allowedHeaders: ['*']
+    allowedHeaders: ["*"]
   },
 });
 

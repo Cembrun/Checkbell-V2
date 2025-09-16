@@ -10,7 +10,22 @@ export function SocketProvider({ children }) {
     // Prefer Vite env var VITE_BACKEND_URL if provided (set in production),
     // otherwise connect to same origin so frontend+backend can be served together.
     const backendUrl = import.meta.env.VITE_BACKEND_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000');
-    const s = io(backendUrl, { autoConnect: true, reconnection: true });
+    const s = io(backendUrl, {
+      autoConnect: true,
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      timeout: 20000,
+      transports: ['websocket', 'polling'],
+      forceNew: false,
+      upgrade: true,
+      rememberUpgrade: true,
+      // CORS related options
+      withCredentials: true,
+      extraHeaders: {
+        'Access-Control-Allow-Origin': '*'
+      }
+    });
     return s;
   }, []);
 

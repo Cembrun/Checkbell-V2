@@ -72,13 +72,17 @@ app.use((req, res, next) => {
   next();
 });
 
-// Additional global CORS handler for all routes
-app.options('*', (req, res) => {
-  res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-user, Cache-Control, Pragma');
-  res.header('Access-Control-Allow-Credentials', 'true');
-  res.status(200).end();
+// Additional global CORS handler for preflight (OPTIONS)
+// Use a simple middleware to avoid express route parsing/path-to-regexp issues on some platforms.
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS, HEAD');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-user, Cache-Control, Pragma');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    return res.status(200).end();
+  }
+  next();
 });
 
 // JSON-Parser

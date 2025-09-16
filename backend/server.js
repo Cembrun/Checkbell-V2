@@ -13,9 +13,9 @@ const app = express();
 // Use Render/Platform provided PORT when available, otherwise default to 4000
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
-const USERS_FILE = "./users.json";
-const DATA_DIR = "./data";
-const UPLOAD_DIR = "./uploads";
+const USERS_FILE = "../users.json";
+const DATA_DIR = "../data";
+const UPLOAD_DIR = "../uploads";
 const ARCHIVE_SUFFIX = "_archive.json"; // z.B. Technik_archive.json
 // Debug: Log current environment in development
 if (process.env.NODE_ENV !== 'production') {

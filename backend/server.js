@@ -1573,74 +1573,74 @@ app.all("/api/seed", (req, res) => {
 //   console.log('Socket connected:', socket.id);
 
 //   // TEST: Sende Test-Event an Client
-  socket.emit('test', 'Hallo vom Server! Die Socket-Verbindung steht.');
+//   socket.emit('test', 'Hallo vom Server! Die Socket-Verbindung steht.');
 
-  socket.on('joinRoom', (room) => {
-    socket.join(room);
-    console.log('joined room', room);
-  });
+//   socket.on('joinRoom', (room) => {
+//     socket.join(room);
+//     console.log('joined room', room);
+//   });
 
-  socket.on('assignment:update', async (payload) => {
-    // payload: { room, nodes, edges, employeeId, toNodeId, position }
-    try {
-      const room = payload?.room || null;
-      // Persist container-style payloads (areas/employees/assignments)
-      try {
-        const stampedAt = payload?.updatedAt || new Date().toISOString();
-        // If payload looks like the containers model, persist to file
-        if (payload?.areas || payload?.employees || payload?.assignments) {
-          const file = path.join(DATA_DIR, 'einteilung_containers.json');
-          await withFileLock(file, async () => {
-            const current = readJSON(file) || {};
-            const stored = {
-              areas: payload.areas || current.areas || [],
-              employees: payload.employees || current.employees || [],
-              assignments: payload.assignments || current.assignments || {},
-              updatedAt: stampedAt,
-              clientId: payload?.clientId || null,
-            };
-            writeJSON(file, stored);
-          });
-        }
+//   socket.on('assignment:update', async (payload) => {
+//     // payload: { room, nodes, edges, employeeId, toNodeId, position }
+//     try {
+//       const room = payload?.room || null;
+//       // Persist container-style payloads (areas/employees/assignments)
+//       try {
+//         const stampedAt = payload?.updatedAt || new Date().toISOString();
+//         // If payload looks like the containers model, persist to file
+//         if (payload?.areas || payload?.employees || payload?.assignments) {
+//           const file = path.join(DATA_DIR, 'einteilung_containers.json');
+//           await withFileLock(file, async () => {
+//             const current = readJSON(file) || {};
+//             const stored = {
+//               areas: payload.areas || current.areas || [],
+//               employees: payload.employees || current.employees || [],
+//               assignments: payload.assignments || current.assignments || {},
+//               updatedAt: stampedAt,
+//               clientId: payload?.clientId || null,
+//             };
+//             writeJSON(file, stored);
+//           });
+//         }
 
-        // If payload looks like a react-flow layout, persist to a separate file
-        if (payload?.nodes || payload?.edges) {
-          const file = path.join(DATA_DIR, 'einteilung_layout.json');
-          await withFileLock(file, async () => {
-            const current = readJSON(file) || {};
-            const stored = {
-              nodes: payload.nodes || current.nodes || [],
-              edges: payload.edges || current.edges || [],
-              updatedAt: stampedAt,
-              clientId: payload?.clientId || null,
-            };
-            writeJSON(file, stored);
-          });
-        }
-      } catch (e) {
-        console.warn('[socket] persist failed', e?.message || e);
-      }
+//         // If payload looks like a react-flow layout, persist to a separate file
+//         if (payload?.nodes || payload?.edges) {
+//           const file = path.join(DATA_DIR, 'einteilung_layout.json');
+//           await withFileLock(file, async () => {
+//             const current = readJSON(file) || {};
+//             const stored = {
+//               nodes: payload.nodes || current.nodes || [],
+//               edges: payload.edges || current.edges || [],
+//               updatedAt: stampedAt,
+//               clientId: payload?.clientId || null,
+//             };
+//             writeJSON(file, stored);
+//           });
+//         }
+//       } catch (e) {
+//         console.warn('[socket] persist failed', e?.message || e);
+//       }
 
-      // Broadcast to other clients. If a room is provided, send to that room; otherwise emit globally.
-      try {
-        const candidateTs = payload?.updatedAt ? Date.parse(payload.updatedAt) : Date.now();
-        const lastTs = lastContainersBroadcastAt ? Date.parse(lastContainersBroadcastAt) : 0;
-        if (room) {
-          // broadcast to room (exclude sender)
-          socket.broadcast.to(room).emit('assignment:updated', payload);
-          lastContainersBroadcastAt = new Date().toISOString();
-        } else {
-          // global emit
-          io.emit('assignment:updated', payload);
-          lastContainersBroadcastAt = new Date().toISOString();
-        }
-      } catch (e) {
-        console.warn('[socket] broadcast failed', e?.message || e);
-      }
-    } catch (e) {
-      console.warn('Failed to persist/broadcast assignment update:', e?.message || e);
-    }
-  });
+//       // Broadcast to other clients. If a room is provided, send to that room; otherwise emit globally.
+//       try {
+//         const candidateTs = payload?.updatedAt ? Date.parse(payload.updatedAt) : Date.now();
+//         const lastTs = lastContainersBroadcastAt ? Date.parse(lastContainersBroadcastAt) : 0;
+//         if (room) {
+//           // broadcast to room (exclude sender)
+//           socket.broadcast.to(room).emit('assignment:updated', payload);
+//           lastContainersBroadcastAt = new Date().toISOString();
+//         } else {
+//           // global emit
+//           io.emit('assignment:updated', payload);
+//           lastContainersBroadcastAt = new Date().toISOString();
+//         }
+//       } catch (e) {
+//         console.warn('[socket] broadcast failed', e?.message || e);
+//       }
+//     } catch (e) {
+//       console.warn('Failed to persist/broadcast assignment update:', e?.message || e);
+//     }
+//   });
 
 //   socket.on('disconnect', () => {
 //     console.log('Socket disconnected:', socket.id);

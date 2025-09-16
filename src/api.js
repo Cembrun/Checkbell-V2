@@ -5,7 +5,9 @@ const BASE =
     import.meta.env &&
     import.meta.env.VITE_API_URL &&
     import.meta.env.VITE_API_URL.replace(/\/+$/, "")) ||
-  "http://localhost:4000";
+  "https://checkbell-v2.onrender.com"; // Temporär hardcoded für Debugging
+
+console.log('🔗 API Base URL:', BASE);
 
 // ---------- Helpers ----------
 function safeGetUsername() {

@@ -100,16 +100,19 @@ export function useServerSavedFilters(username, opts = {}) {
       setError(null);
       try {
         // 1) Server-Prefs laden
+        console.log('🔍 Lade Prefs vom Server...');
         const prefs = await fetchJSON(
           `/api/users/${encodeURIComponent(username)}/prefs`
         );
+        console.log('📥 Prefs geladen:', prefs);
         const raw = prefs ? prefs[scope] : null;
         const merged = sanitizeIncoming(raw, defaults, version);
         if (!aborted) {
           setFilters(merged);
           cacheLocal(username, scope, merged, version);
         }
-      } catch {
+      } catch (e) {
+        console.error('❌ Fehler beim Laden der Prefs:', e);
         // 2) Fallback localStorage
         const local = readLocal(username, scope, defaults, version);
         if (!aborted) setFilters(local);

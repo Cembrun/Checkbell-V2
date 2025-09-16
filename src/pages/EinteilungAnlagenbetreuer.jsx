@@ -69,13 +69,22 @@ export default function EinteilungAnlagenbetreuer() {
           serverSaveTimerRef.current = setTimeout(async () => {
             serverSaveTimerRef.current = null;
             try {
-              await fetch('/api/einteilung/layout', {
+              console.log('🔍 Speichere Layout auf Server...');
+              const response = await fetch('/api/einteilung/layout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
                 body: JSON.stringify({ nodes, edges }),
               });
+              console.log('💾 Server-Speicher Response:', response.status, response.statusText);
+              if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ Server-Speicher Fehler:', errorText);
+              } else {
+                console.log('✅ Layout erfolgreich gespeichert');
+              }
             } catch (e) {
+              console.error('❌ Server-Speicher Exception:', e);
               // ignore server save errors for now
             }
           }, 600);

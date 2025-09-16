@@ -29,6 +29,8 @@ const DEFAULT_ORIGINS = [
   "http://localhost:5174",
   "https://checkbellapp.vercel.app",
   "https://checkbellapp.vercel.app/",
+  "https://checkbell-v2.vercel.app",
+  "https://checkbell-v2.vercel.app/",
   // Historical Vercel preview URL kept for compatibility
   "https://check-bell-ckjz-h5o7jkvrd-cems-projects-97dfc7fd.vercel.app",
 ];
@@ -116,8 +118,8 @@ app.use(
   express.static(UPLOAD_DIR, {
     setHeaders: (res) => {
       // Do not allow wildcard origin here; prefer explicit frontend origin from env.
-      // Use process.env.CLIENT_ORIGIN if provided, otherwise the first envOrigins entry.
-      const preferred = process.env.CLIENT_ORIGIN || envOrigins[0];
+      // Use the first CLIENT_ORIGINS entry if available, otherwise the first envOrigins entry.
+      const preferred = CLIENT_ORIGINS[0] || envOrigins[0];
       if (preferred) {
         res.setHeader("Access-Control-Allow-Origin", preferred);
       }
@@ -1566,10 +1568,8 @@ import { Server as IOServer } from 'socket.io';
 const httpServer = http.createServer(app);
 const io = new IOServer(httpServer, {
   cors: {
-    // allow any localhost origin (any port) during development and the deployed origin
-    origin: process.env.CLIENT_ORIGIN
-      ? [process.env.CLIENT_ORIGIN, 'https://checkbellapp.vercel.app']
-      : [/^http:\/\/localhost(:\d+)?$/i, 'https://checkbellapp.vercel.app'],
+    // Use CLIENT_ORIGINS for consistency with Express CORS
+    origin: CLIENT_ORIGINS,
     methods: ['GET', 'POST'],
     credentials: true,
   },

@@ -17,34 +17,10 @@ const USERS_FILE = "./users.json";
 const DATA_DIR = "./data";
 const UPLOAD_DIR = "./uploads";
 const ARCHIVE_SUFFIX = "_archive.json"; // z.B. Technik_archive.json
-// Allowed client origins. Prefer explicit comma-separated env `CLIENT_ORIGINS`,
-// fallback to single `CLIENT_ORIGIN`, otherwise use sensible defaults.
-const envOrigins = (process.env.CLIENT_ORIGINS || process.env.CLIENT_ORIGIN || "")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
-const DEFAULT_ORIGINS = [
-  "http://localhost:5173",
-  "http://localhost:5174",
-  "https://checkbellapp.vercel.app",
-  "https://checkbellapp.vercel.app/",
-  "https://checkbell-v2.vercel.app",
-  "https://checkbell-v2.vercel.app/",
-  // Add common Vercel preview patterns
-  /^https:\/\/checkbell-v2-.*\.vercel\.app$/,
-  /^https:\/\/check-bell-.*\.vercel\.app$/,
-  // Historical Vercel preview URL kept for compatibility
-  "https://check-bell-ckjz-h5o7jkvrd-cems-projects-97dfc7fd.vercel.app",
-];
-
-const CLIENT_ORIGINS = Array.from(new Set([...envOrigins, ...DEFAULT_ORIGINS.filter(o => typeof o === 'string')]));
-const CLIENT_ORIGIN_PATTERNS = DEFAULT_ORIGINS.filter(o => typeof o !== 'string');
-
-// Debug: Log allowed origins in development
+// Debug: Log current environment in development
 if (process.env.NODE_ENV !== 'production') {
-  console.log('Allowed CORS origins:', CLIENT_ORIGINS);
-  console.log('Allowed CORS patterns:', CLIENT_ORIGIN_PATTERNS);
+  console.log('Server running in development mode');
+  console.log('VITE_BACKEND_URL should be set to:', process.env.VITE_BACKEND_URL || 'not set');
 }
 
 // Basic security headers (minimal, no extra dependency)
@@ -93,12 +69,28 @@ app.use(
           // ignore URL parse errors
         }
       }
-      // Check exact matches
-      if (CLIENT_ORIGINS.includes(origin)) return cb(null, true);
-      // Check patterns
-      for (const pattern of CLIENT_ORIGIN_PATTERNS) {
-        if (pattern.test && pattern.test(origin)) return cb(null, true);
+
+      // Allow specific Vercel domains
+      const allowedOrigins = [
+        'https://checkbellapp.vercel.app',
+        'https://checkbellapp.vercel.app/',
+        'https://checkbell-v2.vercel.app',
+        'https://checkbell-v2.vercel.app/',
+        'https://checkbell-v2-git-main-cems-projects-97dfc7fd.vercel.app'
+      ];
+
+      if (allowedOrigins.includes(origin)) {
+        return cb(null, true);
       }
+
+      // Allow Vercel preview deployments
+      if (origin && (
+        origin.startsWith('https://checkbell-v2-') && origin.endsWith('.vercel.app') ||
+        origin.startsWith('https://check-bell-') && origin.endsWith('.vercel.app')
+      )) {
+        return cb(null, true);
+      }
+
       return cb(null, false);
     },
     credentials: true,
@@ -1583,29 +1575,48 @@ import { Server as IOServer } from 'socket.io';
 const httpServer = http.createServer(app);
 const io = new IOServer(httpServer, {
   cors: {
-    // Use same CORS logic as Express
     origin: function (origin, callback) {
-      // Preflight/Server-zu-Server ohne Origin erlauben
+      // Allow requests with no origin (server-to-server)
       if (!origin) return callback(null, true);
-      // In development allow localhost with any port (Vite may pick 75/5173/etc.)
+
+      // Allow localhost in development
       if (process.env.NODE_ENV !== 'production') {
         try {
-          const u = new URL(origin);
-          if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return callback(null, true);
+          const url = new URL(origin);
+          if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+            return callback(null, true);
+          }
         } catch (e) {
           // ignore URL parse errors
         }
       }
-      // Check exact matches
-      if (CLIENT_ORIGINS.includes(origin)) return callback(null, true);
-      // Check patterns
-      for (const pattern of CLIENT_ORIGIN_PATTERNS) {
-        if (pattern.test && pattern.test(origin)) return callback(null, true);
+
+      // Allow specific Vercel domains
+      const allowedOrigins = [
+        'https://checkbellapp.vercel.app',
+        'https://checkbellapp.vercel.app/',
+        'https://checkbell-v2.vercel.app',
+        'https://checkbell-v2.vercel.app/',
+        'https://checkbell-v2-git-main-cems-projects-97dfc7fd.vercel.app'
+      ];
+
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
       }
-      return callback(null, false);
+
+      // Allow Vercel preview deployments
+      if (origin && (
+        origin.startsWith('https://checkbell-v2-') && origin.endsWith('.vercel.app') ||
+        origin.startsWith('https://check-bell-') && origin.endsWith('.vercel.app')
+      )) {
+        return callback(null, true);
+      }
+
+      return callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET', 'POST'],
     credentials: true,
+    allowedHeaders: ['*']
   },
 });
 

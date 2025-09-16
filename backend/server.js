@@ -1549,30 +1549,30 @@ app.all("/api/seed", (req, res) => {
   res.json({ ok: true, reset, force, summary });
 });
 
-// Server: HTTP + Socket.IO für Realtime
-import http from 'http';
-import { Server as IOServer } from 'socket.io';
+// Server: HTTP only - Socket.IO temporarily disabled
+// import http from 'http';
+// import { Server as IOServer } from 'socket.io';
 
-const httpServer = http.createServer(app);
-const io = new IOServer(httpServer, {
-  cors: {
-    origin: true, // Allow all origins
-    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
-    credentials: true,
-    allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization", "x-user"]
-  },
-  allowEIO3: true, // Allow Engine.IO v3 clients
-  transports: ['websocket', 'polling']
-});
+// const httpServer = http.createServer(app);
+// const io = new IOServer(httpServer, {
+//   cors: {
+//     origin: true, // Allow all origins
+//     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"],
+//     credentials: true,
+//     allowedHeaders: ["Origin", "X-Requested-With", "Content-Type", "Accept", "Authorization", "x-user"]
+//   },
+//   allowEIO3: true, // Allow Engine.IO v3 clients
+//   transports: ['websocket', 'polling']
+// });
 
-// In-memory guard to avoid broadcasting outdated or duplicate container updates
-let lastContainersBroadcastAt = null;
+// // In-memory guard to avoid broadcasting outdated or duplicate container updates
+// let lastContainersBroadcastAt = null;
 
-io.on('connection', (socket) => {
+// io.on('connection', (socket) => {
 
-  console.log('Socket connected:', socket.id);
+//   console.log('Socket connected:', socket.id);
 
-  // TEST: Sende Test-Event an Client
+//   // TEST: Sende Test-Event an Client
   socket.emit('test', 'Hallo vom Server! Die Socket-Verbindung steht.');
 
   socket.on('joinRoom', (room) => {
@@ -1642,28 +1642,17 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('disconnect', () => {
-    console.log('Socket disconnected:', socket.id);
-  });
-});
+//   socket.on('disconnect', () => {
+//     console.log('Socket disconnected:', socket.id);
+//   });
+// });
 
-// Bind to 0.0.0.0 in container/platform environments so external platforms
-// (like Render) can detect the open port. Some platforms provide PORT but do
-// not set NODE_ENV=production, so prefer 0.0.0.0 when a PORT is present or when
-// NODE_ENV=production. Fall back to localhost for local dev.
-// If a platform provides PORT we must bind to 0.0.0.0 so the port is reachable.
-// Some platforms erroneously set HOST=127.0.0.1; explicitly ignore that when
-// PORT is present to ensure external routing works.
-const preferPublicBind = process.env.PORT || process.env.NODE_ENV === 'production' || !!process.env.RENDER || !!process.env.RENDER_REGION;
-let HOST;
-if (process.env.PORT) {
-  HOST = '0.0.0.0';
-} else {
-  HOST = process.env.HOST || (preferPublicBind ? '0.0.0.0' : '127.0.0.1');
-}
-
-httpServer.listen(PORT, HOST, () => {
-  console.log(`✅ Server läuft auf http://${HOST}:${PORT}`);
+// Start HTTP server without Socket.IO
+console.log('🚀 Starting HTTP server without Socket.IO...');
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`🌐 CORS enabled for all origins`);
+  console.log(`🔌 Socket.IO temporarily disabled`);
 });
 
 // Einteilung feature removed from codebase

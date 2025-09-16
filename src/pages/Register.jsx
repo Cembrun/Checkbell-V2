@@ -20,7 +20,12 @@ export default function Register({ onBack }) {
     }
 
     try {
-      const res = await fetch("http://localhost:4000/api/register", {
+      const backendUrl = (typeof import.meta !== "undefined" &&
+        import.meta.env &&
+        import.meta.env.VITE_API_URL &&
+        import.meta.env.VITE_API_URL.replace(/\/+$/, "")) ||
+        "http://localhost:4000";
+      const res = await fetch(`${backendUrl}/api/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username: formData.username, password: formData.password }),

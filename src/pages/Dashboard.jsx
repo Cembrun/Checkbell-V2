@@ -80,6 +80,16 @@ function useServerSavedFilters(username, opts = {}) {
   const LS_KEY = `checkbell:prefs:${username}:${scope}`;
 
   const fetchJSON = async (url, init) => {
+    // Get the correct backend URL
+    const backendUrl = (typeof import.meta !== "undefined" &&
+      import.meta.env &&
+      import.meta.env.VITE_API_URL &&
+      import.meta.env.VITE_API_URL.replace(/\/+$/, "")) ||
+      "http://localhost:4000";
+
+    // Convert relative URLs to absolute URLs
+    const absoluteUrl = url.startsWith('http') ? url : `${backendUrl}${url}`;
+
     // include an x-user header fallback (from localStorage) for development
     // so components that call fetch directly (no central api helper) still
     // provide the backend a recognizable user for requireAuth fallback.
@@ -91,7 +101,7 @@ function useServerSavedFilters(username, opts = {}) {
       }
     })();
 
-    const res = await fetch(url, {
+    const res = await fetch(absoluteUrl, {
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
@@ -143,9 +153,7 @@ function useServerSavedFilters(username, opts = {}) {
       setError(null);
       try {
         const prefs = await fetchJSON(
-          `http://localhost:4000/api/users/${encodeURIComponent(
-            username
-          )}/prefs`
+          `/api/users/${encodeURIComponent(username)}/prefs`
         );
         const loaded = sanitize(prefs?.[scope], defaults);
         if (!abort) {
@@ -176,9 +184,7 @@ function useServerSavedFilters(username, opts = {}) {
       try {
         writeLocal(filters);
         await fetchJSON(
-          `http://localhost:4000/api/users/${encodeURIComponent(
-            username
-          )}/prefs`,
+          `/api/users/${encodeURIComponent(username)}/prefs`,
           { method: "PATCH", body: JSON.stringify({ [scope]: filters }) }
         );
         setLastSavedAt(Date.now());
@@ -194,9 +200,7 @@ function useServerSavedFilters(username, opts = {}) {
     try {
       writeLocal(filters);
       await fetchJSON(
-        `http://localhost:4000/api/users/${encodeURIComponent(
-          username
-        )}/prefs`,
+        `/api/users/${encodeURIComponent(username)}/prefs`,
         { method: "PATCH", body: JSON.stringify({ [scope]: filters }) }
       );
       setLastSavedAt(Date.now());

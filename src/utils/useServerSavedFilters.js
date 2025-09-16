@@ -101,7 +101,7 @@ export function useServerSavedFilters(username, opts = {}) {
       try {
         // 1) Server-Prefs laden
         const prefs = await fetchJSON(
-          `http://localhost:4000/api/users/${encodeURIComponent(username)}/prefs`
+          `/api/users/${encodeURIComponent(username)}/prefs`
         );
         const raw = prefs ? prefs[scope] : null;
         const merged = sanitizeIncoming(raw, defaults, version);
@@ -137,7 +137,7 @@ export function useServerSavedFilters(username, opts = {}) {
       try {
         cacheLocal(username, scope, filters, version);
         await fetchJSON(
-          `http://localhost:4000/api/users/${encodeURIComponent(username)}/prefs`,
+          `/api/users/${encodeURIComponent(username)}/prefs`,
           {
             method: "PATCH",
             body: JSON.stringify({ [scope]: filters }),
@@ -164,7 +164,7 @@ export function useServerSavedFilters(username, opts = {}) {
       }
       cacheLocal(username, scope, filters, version);
       await fetchJSON(
-        `http://localhost:4000/api/users/${encodeURIComponent(username)}/prefs`,
+        `/api/users/${encodeURIComponent(username)}/prefs`,
         {
           method: "PATCH",
           body: JSON.stringify({ [scope]: filters }),

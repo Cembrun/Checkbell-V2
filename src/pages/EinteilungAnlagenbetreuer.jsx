@@ -141,7 +141,12 @@ export default function EinteilungAnlagenbetreuer() {
     (async () => {
       setLoadingRemote(true);
       try {
-        const res = await fetch('http://localhost:4000/api/einteilung/layout', { credentials: 'include' });
+        const backendUrl = (typeof import.meta !== "undefined" &&
+          import.meta.env &&
+          import.meta.env.VITE_API_URL &&
+          import.meta.env.VITE_API_URL.replace(/\/+$/, "")) ||
+          "http://localhost:4000";
+        const res = await fetch(`${backendUrl}/api/einteilung/layout`, { credentials: 'include' });
         if (res.ok) {
           const json = await res.json();
           if (json?.nodes && Array.isArray(json.nodes)) setNodes((json.nodes || []).map((n) => ({ ...n, type: n.type || 'resizable', data: { ...(n.data || {}), onUpdate: (patch) => applyStyleToNode(n.id, patch) } })));
@@ -312,7 +317,12 @@ export default function EinteilungAnlagenbetreuer() {
       if (socket && socket.connected) socket.emit('assignment:update', { room: 'einteilung', nodes, edges });
       // Persist server-side as well (if logged in)
       try {
-        fetch('http://localhost:4000/api/einteilung/layout', {
+        const backendUrl = (typeof import.meta !== "undefined" &&
+          import.meta.env &&
+          import.meta.env.VITE_API_URL &&
+          import.meta.env.VITE_API_URL.replace(/\/+$/, "")) ||
+          "http://localhost:4000";
+        fetch(`${backendUrl}/api/einteilung/layout`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

@@ -5,6 +5,7 @@
     "isAdmin": true,
     "mustChangePassword": false,
     "createdAt": "2025-08-19T21:35:26.116Z",
+    "role": "admin",
     "preferences": {
       "meldungen:Leitstand": {
         "status": "alle",
@@ -20,6 +21,7 @@
     "isAdmin": true,
     "mustChangePassword": true,
     "createdAt": "2025-09-04T20:31:47.166Z",
+    "role": "admin",
     "preferences": {
       "tasks:Technik": {
         "status": "offen",

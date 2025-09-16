@@ -37,8 +37,10 @@ export default function Login({ onLogin }) {
         )}
 
         <div>
-          <label className="text-sm text-gray-300">Benutzername</label>
+          <label htmlFor="login-username" className="text-sm text-gray-300">Benutzername</label>
           <input
+            id="login-username"
+            name="username"
             className="mt-1 w-full p-2 rounded bg-gray-700 focus:outline-none"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
@@ -49,8 +51,10 @@ export default function Login({ onLogin }) {
         </div>
 
         <div>
-          <label className="text-sm text-gray-300">Passwort</label>
+          <label htmlFor="login-password" className="text-sm text-gray-300">Passwort</label>
           <input
+            id="login-password"
+            name="password"
             type="password"
             className="mt-1 w-full p-2 rounded bg-gray-700 focus:outline-none"
             value={password}

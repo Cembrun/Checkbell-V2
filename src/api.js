@@ -1,11 +1,15 @@
 // src/api.js
-// Basis-URL: aus .env (VITE_API_URL) oder lokal
+// Basis-URL: aus .env (VITE_BACKEND_URL) oder lokal
 const BASE =
+  (typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    import.meta.env.VITE_BACKEND_URL &&
+    import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "")) ||
   (typeof import.meta !== "undefined" &&
     import.meta.env &&
     import.meta.env.VITE_API_URL &&
     import.meta.env.VITE_API_URL.replace(/\/+$/, "")) ||
-  "https://checkbell-v2.onrender.com"; // Temporär hardcoded für Debugging
+  "http://localhost:4000"; // Lokaler Fallback
 
 console.log('🔗 API Base URL:', BASE);
 

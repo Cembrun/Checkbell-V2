@@ -139,11 +139,42 @@
   },
   {
     "username": "admin",
-    "password": "$2b$10$FJYODD7cd5yGFpZYHYtaxu5uIQo9AedvTWem5UkMj9/jgnOLeQGMS",
+  "password": "$2b$10$KvnjDhEtVjydfMO7PIPvG.vh3eO/rMOgXUgJHpZE1nY9MpGdrCKCa",
     "isAdmin": true,
     "mustChangePassword": true,
     "createdAt": "2025-09-16T20:00:00.000Z",
     "role": "admin",
-    "preferences": {}
+    "preferences": {
+      "einteilung:Leitstand": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "tasks:Leitstand": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "meldungen:Leitstand": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "meldungen:Technik": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      },
+      "einteilung:Technik": {
+        "status": "alle",
+        "kategorie": "alle",
+        "date": "all",
+        "sort": "desc"
+      }
+    }
   }
 ]

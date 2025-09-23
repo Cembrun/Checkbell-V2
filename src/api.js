@@ -12,6 +12,17 @@ const BASE =
   "http://localhost:4000"; // Lokaler Fallback
 
 console.log('🔗 API Base URL:', BASE);
+// Make runtime API base easily visible in browser console and to injected scripts.
+try {
+  if (typeof window !== 'undefined') {
+    // expose for quick debugging in production builds
+    window.CHECKBELL_RUNTIME_API_BASE = BASE;
+    // clearer console log for end-to-end debugging
+    console.log('🔍 CHECKBELL_RUNTIME_API_BASE:', window.CHECKBELL_RUNTIME_API_BASE);
+  }
+} catch (e) {
+  // ignore in non-browser environments
+}
 
 // ---------- Helpers ----------
 function safeGetUsername() {

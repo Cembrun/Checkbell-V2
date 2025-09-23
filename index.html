@@ -8,6 +8,13 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Runtime API base override: ensures deployed app talks to Render backend -->
+    <script>
+      window.__CHECKBELL_API_BASE = 'https://checkbell-v2.onrender.com';
+      // optional: expose alias for older builds
+      window.CHECKBELL_RUNTIME_API_BASE = window.__CHECKBELL_API_BASE;
+      console.log('🔧 runtime override API base ->', window.__CHECKBELL_API_BASE);
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

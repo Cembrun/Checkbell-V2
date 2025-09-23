@@ -1,28 +1,40 @@
 // src/api.js
-// Basis-URL: aus .env (VITE_BACKEND_URL) oder lokal
-const BASE =
-  (typeof import.meta !== "undefined" &&
-    import.meta.env &&
-    import.meta.env.VITE_BACKEND_URL &&
-    import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, "")) ||
-  (typeof import.meta !== "undefined" &&
-    import.meta.env &&
-    import.meta.env.VITE_API_URL &&
-    import.meta.env.VITE_API_URL.replace(/\/+$/, "")) ||
-  "http://localhost:4000"; // Lokaler Fallback
+// Basis-URL: runtime override -> build-time VITE_* -> fallback localhost
+// Priority:
+// 1) window.__CHECKBELL_API_BASE or window.CHECKBELL_RUNTIME_API_BASE (set at runtime)
+// 2) import.meta.env.VITE_BACKEND_URL or VITE_API_URL (build-time)
+// 3) http://localhost:4000 (dev fallback)
+function getBuildTimeEnv() {
+  try {
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      if (import.meta.env.VITE_BACKEND_URL)
+        return import.meta.env.VITE_BACKEND_URL.replace(/\/+$/, '');
+      if (import.meta.env.VITE_API_URL)
+        return import.meta.env.VITE_API_URL.replace(/\/+$/, '');
+    }
+  } catch (e) {}
+  return null;
+}
 
-console.log('🔗 API Base URL:', BASE);
-// Make runtime API base easily visible in browser console and to injected scripts.
+let BASE = null;
 try {
   if (typeof window !== 'undefined') {
-    // expose for quick debugging in production builds
-    window.CHECKBELL_RUNTIME_API_BASE = BASE;
-    // clearer console log for end-to-end debugging
-    console.log('🔍 CHECKBELL_RUNTIME_API_BASE:', window.CHECKBELL_RUNTIME_API_BASE);
+    BASE = window.__CHECKBELL_API_BASE || window.CHECKBELL_RUNTIME_API_BASE || null;
   }
 } catch (e) {
-  // ignore in non-browser environments
+  BASE = null;
 }
+
+if (!BASE) BASE = getBuildTimeEnv() || 'http://localhost:4000';
+
+// Expose selected runtime base for debugging and for injected scripts.
+try {
+  if (typeof window !== 'undefined') {
+    window.CHECKBELL_RUNTIME_API_BASE = BASE;
+    console.log('🔗 API Base URL:', BASE);
+    console.log('🔍 CHECKBELL_RUNTIME_API_BASE:', window.CHECKBELL_RUNTIME_API_BASE);
+  }
+} catch (e) {}
 
 // ---------- Helpers ----------
 function safeGetUsername() {

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Auth } from "../api";
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, onShowRegister }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
@@ -64,7 +64,7 @@ export default function Login({ onLogin }) {
           />
         </div>
 
-        <button
+  <button
           type="submit"
           disabled={loading}
           className={`w-full py-2 rounded bg-blue-600 hover:bg-blue-500 transition ${
@@ -73,8 +73,12 @@ export default function Login({ onLogin }) {
         >
           {loading ? "Anmelden…" : "Anmelden"}
         </button>
-
-  {/* Kein 'Passwort vergessen' Link */}
+        <div className="flex items-center justify-between mt-3">
+          <button type="button" onClick={() => onShowRegister && onShowRegister()} className="text-sm text-blue-400 hover:underline">
+            Registrieren
+          </button>
+          {/* Kein 'Passwort vergessen' Link */}
+        </div>
       </form>
     </div>
   );

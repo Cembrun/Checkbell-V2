@@ -5,6 +5,7 @@ import { api, apiPost } from "./api";
 import AdminUsers from "./pages/AdminUsers.jsx";
 import Archive from "./pages/Archive.jsx";
 import Login from "./pages/Login";
+import Register from "./pages/Register.jsx";
 import Dashboard from "./pages/Dashboard";
 import Statistik from "./pages/Statistik";
 
@@ -13,6 +14,7 @@ export default function App() {
   const [me, setMe] = useState(null);          // { username, isAdmin, createdAt, mustChangePassword }
   const [showAdmin, setShowAdmin] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+  const [showRegister, setShowRegister] = useState(false);
   const [loadingMe, setLoadingMe] = useState(false);
   const [errMe, setErrMe] = useState("");
   const [infoMsg, setInfoMsg] = useState("");
@@ -172,6 +174,12 @@ export default function App() {
     );
   }
 
-  // Kein Register-Flow mehr – nur Login anzeigen
-  return <Login onLogin={handleLogin} />;
+  // Login / Register flow for unauthenticated users
+  if (!user) {
+    return showRegister ? (
+      <Register onBack={() => setShowRegister(false)} />
+    ) : (
+      <Login onLogin={handleLogin} onShowRegister={() => setShowRegister(true)} />
+    );
+  }
 }

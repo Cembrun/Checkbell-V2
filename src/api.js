@@ -25,7 +25,7 @@ try {
   BASE = null;
 }
 
-if (!BASE) BASE = getBuildTimeEnv() || 'http://localhost:4000';
+if (!BASE) BASE = getBuildTimeEnv() || 'https://checkbell-v2.onrender.com';
 
 // Expose selected runtime base for debugging and for injected scripts.
 try {

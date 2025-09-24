@@ -200,31 +200,36 @@ function ensureInitialAdmin() {
   // safe automated provisioning without committing sensitive files.
   if (process.env.NODE_ENV === 'production') {
     const envAdmin = process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD;
-    if (!users.length || !hasAdmin) {
-      if (envAdmin) {
-        const username = process.env.ADMIN_USERNAME;
-        const defaultPw = process.env.ADMIN_PASSWORD;
-        const hashed = bcrypt.hashSync(defaultPw, 10);
-        const now = new Date().toISOString();
-        const exists = users.find((u) => u.username === username);
-        if (!exists) {
-          users.push({
-            username,
-            password: hashed,
-            isAdmin: true,
-            mustChangePassword: true,
-            createdAt: now,
-          });
-        } else {
-          users = users.map((u) =>
-            u.username === username
-              ? { ...u, isAdmin: true, password: hashed, mustChangePassword: true }
-              : u
-          );
-        }
-        saveUsersArray(users);
+    // If admin credentials are provided via env, always ensure that exact
+    // username exists and is marked as admin (create or update). This allows
+    // operators to provision or rotate an admin without modifying users.json.
+    if (envAdmin) {
+      const username = process.env.ADMIN_USERNAME;
+      const defaultPw = process.env.ADMIN_PASSWORD;
+      const hashed = bcrypt.hashSync(defaultPw, 10);
+      const now = new Date().toISOString();
+      const exists = users.find((u) => u.username === username);
+      if (!exists) {
+        users.push({
+          username,
+          password: hashed,
+          isAdmin: true,
+          mustChangePassword: true,
+          createdAt: now,
+        });
         console.log(`🔐 Production admin created from env: ${username}`);
       } else {
+        users = users.map((u) =>
+          u.username === username
+            ? { ...u, isAdmin: true, password: hashed, mustChangePassword: true }
+            : u
+        );
+        console.log(`🔐 Production admin updated from env: ${username}`);
+      }
+      saveUsersArray(users);
+    } else {
+      // No explicit env admin provided: warn only if there is no admin at all.
+      if (!users.length || !hasAdmin) {
         console.warn('No admin user exists in production - please create an admin user manually or set ADMIN_USERNAME and ADMIN_PASSWORD env vars.');
       }
     }

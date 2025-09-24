@@ -1,16 +1,44 @@
 [
   {
-    "id": "mf5v9kgu778aj2",
+    "id": "mfoihlolzpkssl",
     "abteilung": "Technik",
-    "titel": "test technik aufgabe wiederkehrend ",
-    "beschreibung": "",
-    "zeit": "07:00",
+    "titel": "Tägliche Anlagenrunde",
+    "beschreibung": "Standardprüfung am Morgen.",
+    "zeit": "09:00",
     "intervall": "daily",
-    "dueDate": "",
-    "anleitungUrl": "/uploads/1757018190542_CheckBell_3.png",
-    "createdAt": "2025-09-04T20:36:30.558Z",
-    "createdBy": "Cem",
+    "dueDate": null,
+    "anleitungUrl": null,
+    "createdAt": "2025-09-17T21:46:27.717Z",
+    "createdBy": "Seeder",
+    "vorlaufMin": 480,
+    "cooldownHours": 8
+  },
+  {
+    "id": "mfoihlolabl6o0",
+    "abteilung": "Technik",
+    "titel": "Abend-Checkliste",
+    "beschreibung": "Täglicher Abschluss vor Schichtende.",
+    "zeit": "21:00",
+    "intervall": "daily",
+    "dueDate": null,
+    "anleitungUrl": null,
+    "createdAt": "2025-09-17T21:46:27.717Z",
+    "createdBy": "Seeder",
+    "vorlaufMin": 480,
+    "cooldownHours": 8
+  },
+  {
+    "id": "mfoihlolksmvj6",
+    "abteilung": "Technik",
+    "titel": "Einmalige Sonderprüfung",
+    "beschreibung": "Nur morgen fällig.",
+    "zeit": "10:30",
+    "intervall": "once",
+    "dueDate": "2025-09-18",
+    "anleitungUrl": null,
+    "createdAt": "2025-09-17T21:46:27.717Z",
+    "createdBy": "Seeder",
     "vorlaufMin": 120,
-    "cooldownHours": 2
+    "cooldownHours": 0
   }
 ]

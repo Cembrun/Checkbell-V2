@@ -5,6 +5,7 @@ import cors from "cors";
 import bodyParser from "body-parser";
 import bcrypt from "bcrypt";
 import path from "path";
+import { fileURLToPath } from 'url';
 import multer from "multer";
 import crypto from "crypto";
 import session from "express-session";
@@ -13,9 +14,15 @@ const app = express();
 // Use Render/Platform provided PORT when available, otherwise default to 4000
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4000;
 
-const USERS_FILE = "../users.json";
-const DATA_DIR = "../data";
-const UPLOAD_DIR = "../uploads";
+// Resolve runtime paths reliably (avoid relative-path issues when process cwd differs)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// Project root is assumed to be one level above the backend folder
+const ROOT_DIR = path.resolve(__dirname, '..');
+
+const USERS_FILE = process.env.USERS_FILE || path.join(ROOT_DIR, 'users.json');
+const DATA_DIR = process.env.DATA_DIR || path.join(ROOT_DIR, 'data');
+const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(ROOT_DIR, 'uploads');
 const ARCHIVE_SUFFIX = "_archive.json"; // z.B. Technik_archive.json
 // Debug: Log current environment in development
 if (process.env.NODE_ENV !== 'production') {
@@ -188,13 +195,43 @@ function ensureInitialAdmin() {
   const hasAdmin = users.some((u) => u.isAdmin);
   // Only create default admin in non-production environments to avoid accidental
   // privileged accounts in production deployments.
+  // In production we do not auto-create a default admin unless explicit
+  // admin credentials are provided via environment variables. This allows
+  // safe automated provisioning without committing sensitive files.
   if (process.env.NODE_ENV === 'production') {
+    const envAdmin = process.env.ADMIN_USERNAME && process.env.ADMIN_PASSWORD;
     if (!users.length || !hasAdmin) {
-      console.warn('No admin user exists in production - please create an admin user manually. Skipping auto-create.');
+      if (envAdmin) {
+        const username = process.env.ADMIN_USERNAME;
+        const defaultPw = process.env.ADMIN_PASSWORD;
+        const hashed = bcrypt.hashSync(defaultPw, 10);
+        const now = new Date().toISOString();
+        const exists = users.find((u) => u.username === username);
+        if (!exists) {
+          users.push({
+            username,
+            password: hashed,
+            isAdmin: true,
+            mustChangePassword: true,
+            createdAt: now,
+          });
+        } else {
+          users = users.map((u) =>
+            u.username === username
+              ? { ...u, isAdmin: true, password: hashed, mustChangePassword: true }
+              : u
+          );
+        }
+        saveUsersArray(users);
+        console.log(`🔐 Production admin created from env: ${username}`);
+      } else {
+        console.warn('No admin user exists in production - please create an admin user manually or set ADMIN_USERNAME and ADMIN_PASSWORD env vars.');
+      }
     }
     return;
   }
 
+  // Non-production: create a default admin for convenience when none exists
   if (!users.length || !hasAdmin) {
     const username = "admin";
     const defaultPw = process.env.ADMIN_DEFAULT_PASSWORD || "admin123";

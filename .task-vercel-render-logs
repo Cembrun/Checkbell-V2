@@ -1,0 +1,7 @@
+Requests to run when URLs provided:
+- HEAD <frontend>/assets/index-*.js (check content-type)
+- GET <backend>/ (health)
+- POST <backend>/api/login with admin creds (check 200 and Set-Cookie)
+- GET <frontend>/ (check index served)
+
+Provide Vercel project URL and Render service URL.

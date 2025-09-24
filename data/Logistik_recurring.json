@@ -1,1 +1,44 @@
-[]
+[
+  {
+    "id": "mfoihloouizykt",
+    "abteilung": "Logistik",
+    "titel": "Tägliche Anlagenrunde",
+    "beschreibung": "Standardprüfung am Morgen.",
+    "zeit": "09:00",
+    "intervall": "daily",
+    "dueDate": null,
+    "anleitungUrl": null,
+    "createdAt": "2025-09-17T21:46:27.720Z",
+    "createdBy": "Seeder",
+    "vorlaufMin": 480,
+    "cooldownHours": 8
+  },
+  {
+    "id": "mfoihloojdmmrk",
+    "abteilung": "Logistik",
+    "titel": "Abend-Checkliste",
+    "beschreibung": "Täglicher Abschluss vor Schichtende.",
+    "zeit": "21:00",
+    "intervall": "daily",
+    "dueDate": null,
+    "anleitungUrl": null,
+    "createdAt": "2025-09-17T21:46:27.720Z",
+    "createdBy": "Seeder",
+    "vorlaufMin": 480,
+    "cooldownHours": 8
+  },
+  {
+    "id": "mfoihloo2wubi5",
+    "abteilung": "Logistik",
+    "titel": "Einmalige Sonderprüfung",
+    "beschreibung": "Nur morgen fällig.",
+    "zeit": "10:30",
+    "intervall": "once",
+    "dueDate": "2025-09-18",
+    "anleitungUrl": null,
+    "createdAt": "2025-09-17T21:46:27.720Z",
+    "createdBy": "Seeder",
+    "vorlaufMin": 120,
+    "cooldownHours": 0
+  }
+]

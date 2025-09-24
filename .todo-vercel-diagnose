@@ -1,0 +1,7 @@
+1) Check vercel.json presence and routes
+2) Verify VERCEL env VITE_API_URL is set
+3) Confirm Vercel build logs show `npm run build` success
+4) Test asset URLs on deployed site (HEAD) to ensure content-type JavaScript
+5) Ensure backend on Render is redeployed and reachable (https)
+6) Check cookie/samesite + CORS for cross-site sessions
+7) Redeploy frontend after fixing envs and clear edge cache

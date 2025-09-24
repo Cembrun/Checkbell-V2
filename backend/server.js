@@ -461,23 +461,6 @@ app.get("/api/users", requireAdmin, (req, res) => {
   res.json(users);
 });
 
-// DEBUG: secured endpoint to inspect runtime users.json on deployed instances.
-// Only enabled when DEBUG_TOKEN env var is set; caller must send header
-// 'x-debug-token: <DEBUG_TOKEN>'. This endpoint is temporary and should be
-// removed after debugging.
-app.get('/api/_debug/users', (req, res) => {
-  const token = process.env.DEBUG_TOKEN;
-  if (!token) return res.status(404).json({ message: 'Not available' });
-  const got = req.headers['x-debug-token'] || req.headers['x-debug-token'.toLowerCase()];
-  if (!got || String(got) !== String(token)) return res.status(403).json({ message: 'Forbidden' });
-  try {
-    const users = getUsersArray();
-    return res.json({ ok: true, count: users.length, users, usersFile: USERS_FILE });
-  } catch (e) {
-    return res.status(500).json({ message: 'read failed', error: String(e) });
-  }
-});
-
 app.post("/api/users", requireAdmin, async (req, res) => {
   const { username, password, isAdmin, role } = req.body || {};
   if (!username || !password)

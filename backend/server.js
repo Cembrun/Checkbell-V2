@@ -20,8 +20,8 @@ const __dirname = path.dirname(__filename);
 // Project root is assumed to be one level above the backend folder
 const ROOT_DIR = path.resolve(__dirname, '..');
 
-const USERS_FILE = process.env.USERS_FILE || path.join(ROOT_DIR, 'users.json');
 const DATA_DIR = process.env.DATA_DIR || path.join(ROOT_DIR, 'data');
+// USERS_FILE is resolved after DATA_DIR is ensured (see runtime initialization below)
 const UPLOAD_DIR = process.env.UPLOAD_DIR || path.join(ROOT_DIR, 'uploads');
 const ARCHIVE_SUFFIX = "_archive.json"; // z.B. Technik_archive.json
 // Debug: Log current environment in development
@@ -60,6 +60,55 @@ function ensureDir(p) {
 }
 ensureDir(DATA_DIR);
 ensureDir(UPLOAD_DIR);
+
+// Determine USERS_FILE at runtime.
+// Prefer a writable file inside DATA_DIR (persisted disk) so container writes go to mounted storage.
+// Fallback to repo-level users.json if DATA_DIR is not writable.
+const repoUsersFile = path.join(ROOT_DIR, 'users.json');
+const dataUsersFile = path.join(DATA_DIR, 'users.json');
+let USERS_FILE = process.env.USERS_FILE || dataUsersFile;
+
+try {
+  if (process.env.USERS_FILE) {
+    USERS_FILE = process.env.USERS_FILE;
+  } else {
+    // prefer DATA_DIR if writable
+    try {
+      fs.accessSync(DATA_DIR, fs.constants.W_OK);
+      USERS_FILE = dataUsersFile;
+    } catch (e) {
+      USERS_FILE = repoUsersFile;
+    }
+  }
+} catch (e) {
+  USERS_FILE = process.env.USERS_FILE || repoUsersFile;
+}
+
+// If runtime users file doesn't exist but repo users.json exists, copy it into DATA_DIR so
+// runtime has a initialized users file we can write to.
+try {
+  if (!fs.existsSync(USERS_FILE) && fs.existsSync(repoUsersFile)) {
+    try {
+      // Ensure parent directory exists
+      ensureDir(path.dirname(USERS_FILE));
+      fs.copyFileSync(repoUsersFile, USERS_FILE);
+      console.log('INFO: initialized runtime users file from repo:', USERS_FILE);
+    } catch (e) {
+      console.warn('WARN: failed to copy repo users.json to runtime path', USERS_FILE, e?.message || e);
+    }
+  }
+} catch (e) {}
+
+// Log the chosen users file and count
+try {
+  const exists = fs.existsSync(USERS_FILE);
+  const stat = exists ? fs.statSync(USERS_FILE) : null;
+  const size = stat ? stat.size : 0;
+  const usersPreview = exists ? (Array.isArray(readJSON(USERS_FILE)) ? readJSON(USERS_FILE).length : 0) : 0;
+  console.log(`USERS_FILE=${USERS_FILE} exists=${exists} size=${size} users=${usersPreview}`);
+} catch (e) {
+  console.warn('USERS_FILE inspect error', e?.message || e);
+}
 
 // ----- CORS / JSON / Sessions -----
 app.use((req, res, next) => {
@@ -262,6 +311,19 @@ function ensureInitialAdmin() {
     console.log(`🔐 Default-Admin bereit: ${username} / ${defaultPw}`);
   }
 }
+// If the runtime USERS_FILE doesn't exist but the repository contains a users.json,
+// copy it into the DATA_DIR so the running server sees the committed user records
+// and can persist updates to the mounted data disk.
+const REPO_USERS_FILE = path.join(ROOT_DIR, 'users.json');
+try {
+  if (!fs.existsSync(USERS_FILE) && fs.existsSync(REPO_USERS_FILE)) {
+    fs.copyFileSync(REPO_USERS_FILE, USERS_FILE);
+    console.log('Initialized runtime users from repo users.json ->', USERS_FILE);
+  }
+} catch (e) {
+  console.warn('Failed to initialize runtime users file:', e?.message || e);
+}
+
 ensureInitialAdmin();
 
 /**
